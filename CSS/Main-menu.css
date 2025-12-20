@@ -1,0 +1,151 @@
+/* --- АНИМИРОВАННЫЙ ФОН --- */
+bg-animation {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: -1;
+    background: linear-gradient(45deg, transparent 45%, var(--dark-blue) 50%, transparent 55%);
+    background-size: 200% 200%;
+    animation: bgMove 10s infinite linear;
+    opacity: 0.2;
+}
+
+body {
+    background-color: var(--bg-color);
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+}
+
+.hero-container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* --- ОРБИТАЛЬНОЕ МЕНЮ --- */
+.orbit-menu {
+    position: relative;
+    width: var(--ring-size);
+    height: var(--ring-size);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Главная кнопка в центре */
+.main-toggle {
+    width: var(--logo-size);
+    height: var(--logo-size);
+    border-radius: 50%;
+    border: var(--wh-color);
+    background: var(--wh-color);
+    cursor: pointer;
+    z-index: 100;
+    position: absolute;
+    box-shadow: 0 0 30px rgba(0, 136, 204, 0.2);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.main-toggle:hover {
+    transform: scale(1.1);
+    
+}
+
+.main-toggle:active { transform: scale(0.9); }
+.main-toggle img { width: 70%; display: block; margin: 0 auto; }
+
+/* Область кольца (Бублик) */
+.ring-area {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    pointer-events: none; /* Чтобы клики проходили сквозь пустоту */
+    
+    /* Визуализация "Бублика" (еле заметная граница, опционально) */
+    border: 1px dashed rgba(255, 255, 255, 0.05);
+    
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Когда меню активно */
+.orbit-menu.active .ring-area {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+/* --- ИКОНКИ В КРУГУ --- */
+.orbit-item {
+    position: absolute;
+    width: var(--item-size);
+    height: var(--item-size);
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: 0.3s;
+    
+    /* ЦЕНТРИРОВАНИЕ ПЕРЕД РАЗЛЕТОМ */
+    top: 50%;
+    left: 50%;
+    margin-top: calc(var(--item-size) / -2);
+    margin-left: calc(var(--item-size) / -2);
+    
+    /* Изначально они спрятаны за логотипом */
+    transform: translate(0, 0);
+    opacity: 0;
+}
+
+.orbit-item:hover {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 0 15px var(--accent);
+}
+
+/* Анимация появления (Разлетаются по орбите) */
+.orbit-menu.active .orbit-item {
+    opacity: 1;
+    /* Математика орбиты: 
+       1. rotate(var(--angle)) - поворачиваем ось
+       2. translate(...) - отодвигаем от центра (радиус бублика)
+       3. rotate(...) - поворачиваем иконку обратно, чтобы она стояла ровно
+    */
+    transform: rotate(var(--angle)) translate(120px) rotate(calc(var(--angle) * -1));
+}
+
+/* Эффект "Падения сверху" для появления */
+/* Мы используем delay в JS, чтобы они появлялись по очереди */
+
+
+
+body {
+    /* Основной глубокий градиент под цвет лого */
+    background: radial-gradient(circle at center, #0a192f 0%, #050a0f 100%);
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- АНИМИРОВАННЫЙ ФОН --- */
+.bg-animation {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: -1;
+    background: linear-gradient(45deg, transparent 45%, var(--dark-blue) 50%, transparent 55%);
+    background-size: 200% 200%;
+    animation: bgMove 10s infinite linear;
+    opacity: 0.2;
+}

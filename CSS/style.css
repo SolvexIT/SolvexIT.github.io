@@ -1,0 +1,38 @@
+:root {
+    --bg-color: #121212;
+    --accent: #0091D9;
+    --link-color: #58A6FF;
+    --wh-color: #ffffff;
+    --ring-size: 280px; /* Размер всего бублика */
+    --logo-size: 90px;  /* Размер логотипа */
+    --item-size: 50px;  /* Размер иконок */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    /* Основной глубокий градиент под цвет лого */
+    background: radial-gradient(circle at center, #0a192f 0%, #050a0f 100%);
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+.logo-style {
+    width: var(--logo-size);
+    height: var(--logo-size);
+    border-radius: 50%;
+    border: var(--wh-color);
+    background: var(--wh-color);
+    position: absolute;
+    box-shadow: var(--accent);
+}
+
+:link {
+    color: var(--link-color);
+    text-decoration: none;
+}
+:link:hover {
+    text-decoration: underline;
+}
