@@ -254,3 +254,30 @@ body {
     color: #6AAA7C;
     margin-top: 4px;
 }
+
+/* --- КНОПКА "ПОКАЗАТЬ ЕЩЁ" --- */
+.load-more-btn {
+    display: block;
+    margin: 30px auto; /* Центрируем */
+    padding: 12px 40px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #333;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.load-more-btn:hover {
+    color: white;
+    background: var(--accent); /* Синий цвет */
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(0, 136, 204, 0.4);
+    transform: translateY(-2px);
+}
+
+.load-more-btn:active {
+    transform: scale(0.95);
+}
