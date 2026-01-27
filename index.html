@@ -3,13 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Главная</title>
+    <title>SolvexIT SPA</title>
     <link rel="stylesheet" href="CSS/style.css">
     <link rel="stylesheet" href="CSS/Main-menu.css">
+    <link rel="stylesheet" href="CSS/spa-transitions.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="bg-animation"></div>
+
+    <!-- Header Components (Hidden Initially) -->
+    <div class="site-header-bg" id="headerBg"></div>
+    <div class="header-content" id="headerContent">
+        <div class="random-fact" id="randomFact">Загрузка...</div>
+        <div class="header-search">
+            <input type="text" placeholder="Поиск...">
+        </div>
+    </div>
 
     <div class="hero-container">
         <div class="orbit-menu" id="orbitMenu">
