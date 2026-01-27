@@ -207,16 +207,17 @@ function startSearchAnimation(instant = false) {
     setTimeout(() => mainToggle.classList.add('logo-phase-1'), 50);
 
     // Move to corner (Phase 3)
-    setTimeout(() => mainToggle.classList.add('logo-phase-3'), 400);
+    // Wait for Phase 1 (0.8s) to finish before starting Phase 3
+    setTimeout(() => mainToggle.classList.add('logo-phase-3'), 850);
 
     // Header Background Descends
-    setTimeout(() => headerBg.classList.add('active'), 600);
+    setTimeout(() => headerBg.classList.add('active'), 850);
 
     // Content Appears
     setTimeout(() => {
         headerContent.classList.add('active');
         searchResultsContainer.classList.add('active');
-    }, 900);
+    }, 1400);
 }
 
 function returnToMenu() {
