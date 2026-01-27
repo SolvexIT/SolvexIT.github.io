@@ -18,13 +18,17 @@
     <div class="header-content" id="headerContent">
         <div class="random-fact" id="randomFact">Загрузка...</div>
         <div class="header-search">
-            <input type="text" id="searchInput" placeholder="Поиск...">
+            <div class="search-input-wrapper">
+                <input type="text" id="searchInput" placeholder="Поиск...">
+                <button class="search-icon-btn tag-toggle-btn" id="toggleTagsBtn" title="Теги"><i class="fas fa-tags"></i></button>
+                <button class="search-icon-btn clear-search-btn" id="clearSearchBtn" title="Очистить"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="tag-filters"></div>
         </div>
     </div>
 
     <!-- Search Results Container (Hidden Initially) -->
     <div id="searchResultsContainer" class="search-results-wrapper">
-        <div id="tag-filters"></div>
         <div id="results-area"></div>
     </div>
 
@@ -35,6 +39,17 @@
                 <img src="Media/SolvexIT-Max_A.png" alt="Logo" id="mainLogoImg">
             </button>
         </div>
+    </div>
+
+    <!-- Music Player -->
+    <div class="music-player" id="musicPlayer">
+        <i class="fas fa-music music-player-icon" id="playPauseBtn"></i>
+        <div class="music-controls">
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.2">
+        </div>
+        <audio id="bgMusic" loop>
+            <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+        </audio>
     </div>
 
     <script src="JS/Main-menu.js"></script>
