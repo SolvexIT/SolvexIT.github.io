@@ -55,10 +55,12 @@ async function fetchFact() {
             const randomIndex = Math.floor(Math.random() * factsCache.length);
             // Анимация смены текста
             randomFactEl.style.opacity = 0;
+            
             setTimeout(() => {
-                randomFactEl.textContent = factsCache[randomIndex].text;
+                // Для мобильной анимации (marquee) нужно обернуть в span
+                randomFactEl.innerHTML = `<span>${factsCache[randomIndex].text}</span>`;
                 randomFactEl.style.opacity = 1;
-            }, 300);
+            }, 600); // Wait for fade out
         }
     } catch (e) {
         console.error("Ошибка фактов:", e);
@@ -74,6 +76,7 @@ function startFactRotation() {
 
 function stopFactRotation() {
     if (factInterval) clearInterval(factInterval);
+    randomFactEl.style.opacity = 0; // Hide when stopped
 }
 
 
@@ -165,7 +168,10 @@ mainToggle.addEventListener('click', () => {
 
 
 // --- АНИМАЦИЯ ПЕРЕХОДА (SPA) ---
-function startSearchAnimation() {
+function startSearchAnimation(instant = false) {
+    // Сохраняем состояние
+    window.location.hash = 'search';
+
     startFactRotation(); // Запуск фактов
     initSearchEngine(); // Инициализация поиска
 
@@ -179,6 +185,16 @@ function startSearchAnimation() {
     mainToggle.style.left = rect.left + 'px';
     mainToggle.style.top = rect.top + 'px';
     mainToggle.classList.add('logo-transitioning');
+    
+    if (instant) {
+         // Мгновенный переход при загрузке
+        mainToggle.classList.add('logo-phase-3');
+        headerBg.classList.add('active');
+        headerContent.classList.add('active');
+        searchResultsContainer.classList.add('active');
+        return;
+    }
+
     void mainToggle.offsetWidth; // Reflow
 
     // 3. Последовательность
@@ -192,6 +208,7 @@ function startSearchAnimation() {
 }
 
 function returnToMenu() {
+    window.location.hash = ''; // Clear hash
     stopFactRotation();
     document.body.classList.remove('search-mode');
     
@@ -199,7 +216,7 @@ function returnToMenu() {
     headerContent.classList.remove('active');
     searchResultsContainer.classList.remove('active');
 
-    // Лого назад в центр шапки
+    // Лого назад к Phase 1 (Top Center)
     setTimeout(() => {
         mainToggle.classList.remove('logo-phase-3');
     }, 300);
@@ -213,11 +230,19 @@ function returnToMenu() {
     setTimeout(() => {
         mainToggle.classList.remove('logo-phase-1');
         
+        // --- FIX TELEPORT ---
+        // Manually animate to screen center before removing 'logo-transitioning'
+        mainToggle.style.top = '50%';
+        mainToggle.style.left = '50%';
+        mainToggle.style.transform = 'translate(-50%, -50%)';
+        
         // Ждем завершения движения в центр (0.8s)
         setTimeout(() => {
             mainToggle.classList.remove('logo-transitioning');
-            mainToggle.style.left = '';
+            // Clean up inline styles to let CSS take over (orbit menu positioning)
             mainToggle.style.top = '';
+            mainToggle.style.left = '';
+            mainToggle.style.transform = '';
             
             // Возвращаем орбитальное меню
             renderItems(menuConfig);
@@ -240,6 +265,11 @@ function initSearchEngine() {
     const searchInput = document.getElementById('searchInput');
     const resultsArea = document.getElementById('results-area');
     const tagFilters = document.getElementById('tag-filters');
+    
+    // Style tag filters container
+    tagFilters.style.width = '100%';
+    tagFilters.style.maxWidth = '800px';
+    tagFilters.style.marginBottom = '20px';
     
     let db = []; 
     let selectedTags = new Set();
@@ -372,3 +402,17 @@ function initSearchEngine() {
 
     searchInitialized = true;
 }
+
+// --- INITIALIZATION ---
+window.addEventListener('load', () => {
+    if (window.location.hash === '#search') {
+        startSearchAnimation(true);
+    } else {
+        // Initial menu render
+        if (!isMenuOpen) {
+            renderItems(menuConfig);
+            setTimeout(() => orbitMenu.classList.add('active'), 100);
+            isMenuOpen = true;
+        }
+    }
+});
