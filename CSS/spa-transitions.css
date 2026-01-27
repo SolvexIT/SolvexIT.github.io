@@ -1,16 +1,17 @@
-/* Header Background */
+/* Header Background - Dark Theme */
 .site-header-bg {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 80px;
-    background: white;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    background: #0a192f; /* Dark Blue Theme */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     opacity: 0;
     transform: translateY(-100%);
     transition: transform 0.5s ease, opacity 0.5s ease;
-    z-index: 90; /* Behind logo (100) but above background */
+    z-index: 90; 
 }
 
 .site-header-bg.active {
@@ -27,18 +28,18 @@
     height: 80px;
     display: flex;
     align-items: center;
-    padding-left: 100px; /* Space for logo */
+    padding-left: 100px; 
     padding-right: 40px;
     z-index: 95;
-    pointer-events: none; /* Initially non-interactive */
+    pointer-events: none; 
 }
 
 /* Random Fact */
 .random-fact {
-    flex-grow: 1; /* Take available space */
+    flex-grow: 1;
     font-family: 'Segoe UI', sans-serif;
-    font-size: 0.9rem;
-    color: #333;
+    font-size: 1rem;
+    color: #e0e0e0; /* Light text for dark theme */
     text-align: center;
     opacity: 0;
     transform: translateY(20px);
@@ -47,7 +48,7 @@
 
 /* Search Box */
 .header-search {
-    flex-shrink: 0; /* Prevent shrinking */
+    flex-shrink: 0;
     opacity: 0;
     transform: translateX(20px);
     transition: opacity 0.6s ease, transform 0.6s ease;
@@ -56,17 +57,17 @@
 .header-search input {
     padding: 10px 20px;
     border-radius: 25px;
-    border: 1px solid #ddd;
-    background: #f5f5f5;
+    border: 1px solid #333;
+    background: #1e1e1e;
+    color: white;
     outline: none;
     width: 250px;
     transition: all 0.3s;
 }
 
 .header-search input:focus {
-    background: white;
     border-color: #0091D9;
-    box-shadow: 0 0 5px rgba(0, 145, 217, 0.3);
+    box-shadow: 0 0 10px rgba(0, 145, 217, 0.2);
 }
 
 /* Active State for Content */
@@ -83,12 +84,10 @@
 }
 
 /* Animation Classes for Logo */
-/* Important to override the Orbit Menu styles */
-
 .logo-transitioning {
     position: fixed !important;
     transition: all 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) !important;
-    margin: 0 !important; /* Remove any margins */
+    margin: 0 !important;
     z-index: 1000 !important;
 }
 
@@ -99,9 +98,40 @@
     transform: translateX(-50%) scale(0.8) !important;
 }
 
-/* Phase 3: Move Left */
+/* Phase 3: Move Left (Final Position) */
 .logo-phase-3 {
-    top: 15px !important;
+    top: 10px !important; /* Center in 80px header (80 - 60 / 2 = 10) */
     left: 20px !important;
-    transform: translateX(0) scale(0.6) !important;
+    transform: translateX(0) scale(0.66) !important; /* 90px * 0.66 = ~60px */
+    box-shadow: none !important; /* Remove shadow to fit style */
+    background: transparent !important; /* Remove white circle bg */
+    border: none !important;
+    cursor: pointer !important; /* Ensure clickable */
+}
+
+/* Search Results Container */
+.search-results-wrapper {
+    position: absolute;
+    top: 100px;
+    left: 0;
+    width: 100%;
+    min-height: calc(100vh - 100px);
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.search-results-wrapper.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Allow scrolling when search is active */
+body.search-mode {
+    overflow-y: auto !important;
 }
