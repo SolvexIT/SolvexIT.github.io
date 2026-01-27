@@ -6,6 +6,7 @@
     <title>SolvexIT SPA</title>
     <link rel="stylesheet" href="CSS/style.css">
     <link rel="stylesheet" href="CSS/Main-menu.css">
+    <link rel="stylesheet" href="CSS/search.css"> <!-- Added search styles -->
     <link rel="stylesheet" href="CSS/spa-transitions.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -17,8 +18,14 @@
     <div class="header-content" id="headerContent">
         <div class="random-fact" id="randomFact">Загрузка...</div>
         <div class="header-search">
-            <input type="text" placeholder="Поиск...">
+            <input type="text" id="searchInput" placeholder="Поиск...">
         </div>
+    </div>
+
+    <!-- Search Results Container (Hidden Initially) -->
+    <div id="searchResultsContainer" class="search-results-wrapper">
+        <div id="tag-filters"></div>
+        <div id="results-area"></div>
     </div>
 
     <div class="hero-container">
