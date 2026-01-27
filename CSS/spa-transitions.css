@@ -100,13 +100,13 @@
 
 /* Phase 3: Move Left (Final Position) */
 .logo-phase-3 {
-    top: 10px !important; /* Center in 80px header (80 - 60 / 2 = 10) */
+    top: 40px !important; /* Center of 80px header */
     left: 20px !important;
-    transform: translateX(0) scale(0.66) !important; /* 90px * 0.66 = ~60px */
-    box-shadow: none !important; /* Remove shadow to fit style */
-    background: transparent !important; /* Remove white circle bg */
+    transform: translate(0, -50%) scale(0.66) !important; 
+    box-shadow: none !important; 
+    background: transparent !important; 
     border: none !important;
-    cursor: pointer !important; /* Ensure clickable */
+    cursor: pointer !important; 
 }
 
 /* Search Results Container */
@@ -134,4 +134,46 @@
 /* Allow scrolling when search is active */
 body.search-mode {
     overflow-y: auto !important;
+}
+
+/* --- MOBILE NOTIFICATION STYLE --- */
+@media (max-width: 768px) {
+    .header-content {
+        padding-left: 10px; 
+        padding-right: 10px;
+        justify-content: flex-end; /* Align search to right */
+    }
+
+    .header-search {
+        transform: none !important; 
+        opacity: 1 !important; /* Ensure visible if JS toggles it */
+        margin-right: 10px;
+    }
+    
+    .header-search input {
+        width: 180px;
+    }
+
+    /* Notification Bar Style */
+    .random-fact {
+        position: fixed;
+        top: 80px; /* Directly below header */
+        left: 0;
+        width: 100%;
+        height: 30px;
+        background: rgba(10, 25, 47, 0.95);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* Start text */
+        padding: 0 10px;
+        font-size: 0.85rem;
+        color: var(--accent);
+        overflow: hidden;
+        white-space: nowrap;
+        z-index: 85;
+        transform: translateY(0) !important;
+        opacity: 0; /* JS controls opacity */
+        transition: opacity 0.5s ease;
+    }
 }
