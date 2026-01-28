@@ -1,9 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const playPauseBtn = document.getElementById('playPauseBtn');
+    // --- Elements ---
+    const musicPlayerContainer = document.getElementById('musicPlayer');
+    const mainMusicBtn = document.getElementById('mainMusicBtn');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnVol = document.getElementById('btnVol');
+    const volSliderWrapper = document.getElementById('volSliderWrapper');
+    const volumeSlider = document.getElementById('volumeSlider');
     const bgMusic = document.getElementById('bgMusic');
-    const volumeSlider = document.getElementById('volumeSlider'); // Keep volume logic if present
 
-    if (!bgMusic || !playPauseBtn) return;
+    if (!bgMusic || !mainMusicBtn) return;
 
     // --- Configuration ---
     const STATE_KEY = 'musicPlaying';
@@ -30,19 +35,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Determine Initial State (Default to TRUE if null)
     let shouldPlay = localStorage.getItem(STATE_KEY);
     if (shouldPlay === null) {
-        shouldPlay = 'true'; // Default on
+        shouldPlay = 'true';
     }
 
     // --- Functions ---
 
     function updateUI(isPlaying) {
         if (isPlaying) {
-            playPauseBtn.classList.add('spinning');
-            // Ensure icon is music note (if we want to toggle icon we can, but user asked for spinning music icon)
-            playPauseBtn.classList.remove('fa-pause');
-            playPauseBtn.classList.add('fa-music'); 
+            mainMusicBtn.classList.add('spinning');
+            if (btnPlay) {
+                const icon = btnPlay.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-play');
+                    icon.classList.add('fa-pause');
+                }
+            }
         } else {
-            playPauseBtn.classList.remove('spinning');
+            mainMusicBtn.classList.remove('spinning');
+            if (btnPlay) {
+                const icon = btnPlay.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-pause');
+                    icon.classList.add('fa-play');
+                }
+            }
         }
     }
 
@@ -50,13 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const playPromise = bgMusic.play();
         if (playPromise !== undefined) {
             playPromise.then(() => {
-                // Play success
                 localStorage.setItem(STATE_KEY, 'true');
                 updateUI(true);
             }).catch(error => {
-                console.log("Autoplay prevented or failed:", error);
-                // If failed (e.g. browser policy), we show paused state
-                // But we keep the intent to play if user interacts?
+                console.log("Autoplay prevented:", error);
                 updateUI(false); 
             });
         }
@@ -78,32 +91,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listeners ---
 
-    // Toggle on icon click
-    playPauseBtn.addEventListener('click', (e) => {
-        // Prevent bubbling if button is inside another clickable
+    // 1. Main Button: Toggle Menu
+    mainMusicBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        toggleMusic();
+        musicPlayerContainer.classList.toggle('expanded');
+        // If closing, also close slider
+        if (!musicPlayerContainer.classList.contains('expanded')) {
+            volSliderWrapper.classList.remove('visible');
+        }
     });
 
-    // Volume Slider
+    // 2. Play Button: Toggle Music
+    if (btnPlay) {
+        btnPlay.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleMusic();
+        });
+    }
+
+    // 3. Volume Button: Toggle Slider
+    if (btnVol) {
+        btnVol.addEventListener('click', (e) => {
+            e.stopPropagation();
+            volSliderWrapper.classList.toggle('visible');
+        });
+    }
+
+    // 4. Slider Input
     if (volumeSlider) {
         volumeSlider.addEventListener('input', (e) => {
             bgMusic.volume = e.target.value;
             localStorage.setItem(VOL_KEY, e.target.value);
         });
-        // Prevent click on slider from toggling music if nested
+        // Prevent closing when clicking slider
         volumeSlider.addEventListener('click', (e) => e.stopPropagation());
+        volSliderWrapper.addEventListener('click', (e) => e.stopPropagation());
     }
 
-    // Save time continuously
+    // 5. Global: Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!musicPlayerContainer.contains(e.target)) {
+            musicPlayerContainer.classList.remove('expanded');
+            volSliderWrapper.classList.remove('visible');
+        }
+    });
+
+    // 6. Audio Events
     bgMusic.addEventListener('timeupdate', () => {
         sessionStorage.setItem(TIME_KEY, bgMusic.currentTime);
     });
 
-    // Handle "Ended" (Loop is set in HTML, but just in case)
     bgMusic.addEventListener('ended', () => {
-        if (bgMusic.loop) return; 
-        // If not looping, maybe update UI?
+        if (!bgMusic.loop) updateUI(false);
     });
 
     // --- Auto-Play Logic ---
@@ -112,16 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         updateUI(false);
     }
-    
-    // Global click fallback for autoplay policy
-    // If the user wants it to turn on "by itself" and browser blocks it, 
-    // we can try to start it on the very first interaction with the page 
-    // IF the preference is true and it's currently paused.
+
+    // Fallback for autoplay policy
     const autoPlayFallback = () => {
         if (shouldPlay === 'true' && bgMusic.paused) {
             playMusic();
         }
-        // Remove listener after first interaction
         document.removeEventListener('click', autoPlayFallback);
         document.removeEventListener('keydown', autoPlayFallback);
     };
