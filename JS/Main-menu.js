@@ -179,8 +179,7 @@ mainToggle.addEventListener('click', () => {
 // Generic View Switcher
 function switchView(viewName, instant = false) {
     window.location.hash = viewName;
-    startFactRotation();
-
+    
     // 1. Hide Menu
     orbitMenu.classList.remove('active');
     isMenuOpen = false;
@@ -197,6 +196,7 @@ function switchView(viewName, instant = false) {
         headerBg.classList.add('active');
         headerContent.classList.add('active');
         activateViewContainer(viewName);
+        startFactRotation();
         return;
     }
 
@@ -211,7 +211,8 @@ function switchView(viewName, instant = false) {
     setTimeout(() => {
         headerContent.classList.add('active');
         activateViewContainer(viewName);
-    }, 1400);
+        startFactRotation();
+    }, 1800);
 }
 
 function activateViewContainer(viewName) {
@@ -271,10 +272,9 @@ function returnToMenu() {
         mainToggle.style.transform = '';
 
         renderItems(menuConfig);
-        setTimeout(() => {
-            orbitMenu.classList.add('active');
-            isMenuOpen = true;
-        }, 50);
+        // Menu stays closed, waiting for user interaction (pulsing logo)
+        isMenuOpen = false;
+        orbitMenu.classList.remove('active');
     }, 1400);
 }
 
