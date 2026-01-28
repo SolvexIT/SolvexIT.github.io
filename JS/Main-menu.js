@@ -58,9 +58,9 @@ async function fetchFact() {
 
             // Анимация смены текста
             randomFactEl.style.opacity = 0;
-            randomFactEl.classList.remove('scroll-active'); // Reset scroll
-
+            
             setTimeout(() => {
+                randomFactEl.classList.remove('scroll-active'); // Reset scroll
                 randomFactEl.innerHTML = `<span>${text}</span>`;
                 randomFactEl.style.opacity = 1;
 
