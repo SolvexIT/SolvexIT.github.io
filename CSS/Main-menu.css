@@ -60,7 +60,7 @@ body {
 
 .main-toggle:hover {
     animation: none !important; /* Отключаем пульс при наведении, чтобы сработал hover-эффект */
-    transform: scale(1.15) rotate(5deg);
+    transform: scale(1.15);
     box-shadow: 0 0 40px var(--accent), 0 0 15px var(--wh-color);
 }
 
