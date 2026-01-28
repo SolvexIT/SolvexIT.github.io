@@ -138,6 +138,22 @@ body {
 
 .available-tags {
     margin-bottom: 10px;
+    /* Custom Scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) #1e1e1e;
+}
+
+/* Chrome/Safari/Edge Scrollbar */
+.available-tags::-webkit-scrollbar {
+    width: 6px;
+}
+.available-tags::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+.available-tags::-webkit-scrollbar-thumb {
+    background-color: var(--accent);
+    border-radius: 4px;
 }
 
 .available-tag {
@@ -246,13 +262,23 @@ body {
 }
 
 .tag_container {
-    padding: 2px 5px;
-    margin: 0 2px;
+    padding: 5px 12px;
+    margin: 4px 4px 0 0;
     text-decoration: none;
-    background: #504945;
-    border-radius: 10%;
-    color: #6AAA7C;
-    margin-top: 4px;
+    background: rgba(0, 145, 217, 0.15); /* Low opacity accent */
+    border: 1px solid rgba(0, 145, 217, 0.3);
+    border-radius: 20px; /* Pill shape */
+    color: #58A6FF;
+    display: inline-block;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.tag_container:hover {
+    background: rgba(0, 145, 217, 0.4);
+    box-shadow: 0 0 10px rgba(0, 145, 217, 0.4);
+    transform: translateY(-1px);
+    color: white;
 }
 
 /* --- КНОПКА "ПОКАЗАТЬ ЕЩЁ" --- */
