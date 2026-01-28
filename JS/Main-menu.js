@@ -154,8 +154,8 @@ function goBack() {
 }
 
 mainToggle.addEventListener('click', () => {
-    // ЕСЛИ МЫ В РЕЖИМЕ ПОИСКА -> ВОЗВРАТ В МЕНЮ
-    if (document.body.classList.contains('search-mode')) {
+    // ЕСЛИ МЫ В РЕЖИМЕ ПОИСКА ИЛИ ПРОСМОТРА -> ВОЗВРАТ В МЕНЮ
+    if (document.body.classList.contains('search-mode') || document.body.classList.contains('view-mode')) {
         returnToMenu();
         return;
     }
@@ -176,17 +176,17 @@ mainToggle.addEventListener('click', () => {
 
 
 // --- АНИМАЦИЯ ПЕРЕХОДА (SPA) ---
-function startSearchAnimation(instant = false) {
-    window.location.hash = 'search';
+// Generic View Switcher
+function switchView(viewName, instant = false) {
+    window.location.hash = viewName;
     startFactRotation();
-    initSearchEngine();
 
-    // 1. Убираем меню
+    // 1. Hide Menu
     orbitMenu.classList.remove('active');
     isMenuOpen = false;
-    document.body.classList.add('search-mode');
+    document.body.classList.add('view-mode'); // Generic class instead of search-mode
 
-    // 2. Фиксируем позицию
+    // 2. Fix Logo Position
     const rect = mainToggle.getBoundingClientRect();
     mainToggle.style.left = rect.left + 'px';
     mainToggle.style.top = rect.top + 'px';
@@ -196,43 +196,61 @@ function startSearchAnimation(instant = false) {
         mainToggle.classList.add('logo-phase-3');
         headerBg.classList.add('active');
         headerContent.classList.add('active');
-        searchResultsContainer.classList.add('active');
+        activateViewContainer(viewName);
         return;
     }
 
     void mainToggle.offsetWidth; // Reflow
 
-    // 3. New Sequence:
-    // Move slightly up (Phase 1)
+    // 3. Animation Sequence
     setTimeout(() => mainToggle.classList.add('logo-phase-1'), 50);
-
-    // Move to corner (Phase 3)
-    // Wait for Phase 1 (0.8s) to finish before starting Phase 3
     setTimeout(() => mainToggle.classList.add('logo-phase-3'), 850);
-
-    // Header Background Descends
     setTimeout(() => headerBg.classList.add('active'), 850);
 
-    // Content Appears
+    // 4. Show Specific Content
     setTimeout(() => {
         headerContent.classList.add('active');
-        searchResultsContainer.classList.add('active');
+        activateViewContainer(viewName);
     }, 1400);
+}
+
+function activateViewContainer(viewName) {
+    // Hide all views first
+    searchResultsContainer.classList.remove('active');
+    const instructionsContainer = document.getElementById('instructionsContainer');
+    if (instructionsContainer) instructionsContainer.classList.remove('active');
+
+    // Show target view
+    if (viewName === 'search') {
+        initSearchEngine();
+        searchResultsContainer.classList.add('active');
+        document.body.classList.add('search-mode'); // Keep for search-specific styles if any
+    } else if (viewName === 'instructions') {
+        if (instructionsContainer) instructionsContainer.classList.add('active');
+    }
+}
+
+function startSearchAnimation(instant = false) {
+    switchView('search', instant);
 }
 
 function returnToMenu() {
     window.location.hash = '';
     stopFactRotation();
+    document.body.classList.remove('view-mode');
     document.body.classList.remove('search-mode');
 
     // Blur Input & Reset
     const input = document.getElementById('searchInput');
     if(input) input.blur();
 
-    // 1. Hide Content First
+    // 1. Hide Content
     headerContent.classList.remove('active');
     searchResultsContainer.classList.remove('active');
-    tagFilters.classList.remove('active'); // Close tags if open
+    const instructionsContainer = document.getElementById('instructionsContainer');
+    if (instructionsContainer) instructionsContainer.classList.remove('active');
+    
+    tagFilters.classList.remove('active');
 
     // 2. Hide Header BG
     setTimeout(() => {
@@ -245,7 +263,7 @@ function returnToMenu() {
         mainToggle.classList.remove('logo-phase-1');
     }, 600);
 
-    // 4. Clean up styles after it arrives
+    // 4. Clean up styles
     setTimeout(() => {
         mainToggle.classList.remove('logo-transitioning');
         mainToggle.style.left = '';

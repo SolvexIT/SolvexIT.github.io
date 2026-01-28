@@ -16,7 +16,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow-y: auto; /* Разрешаем вертикальную прокрутку */
+    /* overflow-y: auto; Removed - handled by search-mode class */
 }
 
 /* --- СТРАНИЦА ПОИСКА --- */
