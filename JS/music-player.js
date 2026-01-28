@@ -11,9 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!bgMusic || !mainMusicBtn) return;
 
     // --- Configuration ---
-    const STATE_KEY = 'musicPlaying';
-    const TIME_KEY = 'musicCurrentTime';
-    const VOL_KEY = 'musicVolume';
+    const STATE_KEY = 'solvex_music_playing'; // Unique namespace
+    const TIME_KEY = 'solvex_music_time';
+    const VOL_KEY = 'solvex_music_volume';
 
     // --- Initialization ---
 
@@ -27,16 +27,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 2. Restore Time
-    const savedTime = sessionStorage.getItem(TIME_KEY);
+    const savedTime = localStorage.getItem(TIME_KEY); // Changed to localStorage for cross-session resume
     if (savedTime) {
         bgMusic.currentTime = parseFloat(savedTime);
     }
 
-    // 3. Determine Initial State (Default to TRUE if null)
+    // 3. Determine Initial State
+    // Default to 'true' (playing) if user hasn't visited before
     let shouldPlay = localStorage.getItem(STATE_KEY);
-    if (shouldPlay === null) {
-        shouldPlay = 'true';
-    }
+    if (shouldPlay === null) shouldPlay = 'true';
 
     // --- Functions ---
 
@@ -62,17 +61,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function playMusic() {
+    // Robust Play Function
+    function attemptPlay() {
         const playPromise = bgMusic.play();
+
         if (playPromise !== undefined) {
-            playPromise.then(() => {
-                localStorage.setItem(STATE_KEY, 'true');
-                updateUI(true);
-            }).catch(error => {
-                console.log("Autoplay prevented:", error);
-                updateUI(false); 
-            });
+            playPromise
+                .then(() => {
+                    // Success: Audio is playing
+                    localStorage.setItem(STATE_KEY, 'true');
+                    updateUI(true); 
+                })
+                .catch(error => {
+                    console.log("Autoplay blocked by browser. Waiting for user interaction...");
+                    updateUI(false); 
+                    addInteractionTrigger();
+                });
         }
+    }
+
+    function addInteractionTrigger() {
+        const triggerAudio = () => {
+            bgMusic.play().then(() => {
+                // Success
+                updateUI(true);
+                document.removeEventListener('click', triggerAudio);
+                document.removeEventListener('keydown', triggerAudio);
+                document.removeEventListener('touchstart', triggerAudio);
+            }).catch(e => {
+                // Still failed? Keep listener attached.
+                console.log("Interaction trigger failed (rare):", e);
+            });
+        };
+
+        document.addEventListener('click', triggerAudio);
+        document.addEventListener('keydown', triggerAudio);
+        document.addEventListener('touchstart', triggerAudio); // Mobile support
     }
 
     function pauseMusic() {
@@ -83,7 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function toggleMusic() {
         if (bgMusic.paused) {
-            playMusic();
+            attemptPlay();
+            localStorage.setItem(STATE_KEY, 'true');
         } else {
             pauseMusic();
         }
@@ -95,7 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
     mainMusicBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         musicPlayerContainer.classList.toggle('expanded');
-        // If closing, also close slider
+        
+        // Mobile UX: If menu is opened, ensure slider is visible or handled
         if (!musicPlayerContainer.classList.contains('expanded')) {
             volSliderWrapper.classList.remove('visible');
         }
@@ -123,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
             bgMusic.volume = e.target.value;
             localStorage.setItem(VOL_KEY, e.target.value);
         });
-        // Prevent closing when clicking slider
         volumeSlider.addEventListener('click', (e) => e.stopPropagation());
         volSliderWrapper.addEventListener('click', (e) => e.stopPropagation());
     }
@@ -137,30 +162,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 6. Audio Events
+    // Save time frequently
     bgMusic.addEventListener('timeupdate', () => {
-        sessionStorage.setItem(TIME_KEY, bgMusic.currentTime);
+        // Save every second roughly to avoid thrashing, or just on unload
+        if (Math.floor(bgMusic.currentTime) % 5 === 0) {
+            localStorage.setItem(TIME_KEY, bgMusic.currentTime);
+        }
+    });
+    
+    // Save on pause/unload
+    window.addEventListener('beforeunload', () => {
+        localStorage.setItem(TIME_KEY, bgMusic.currentTime);
     });
 
     bgMusic.addEventListener('ended', () => {
-        if (!bgMusic.loop) updateUI(false);
+        if (!bgMusic.loop) {
+            updateUI(false);
+            localStorage.setItem(STATE_KEY, 'false');
+        }
     });
 
-    // --- Auto-Play Logic ---
+    // --- Start Logic ---
     if (shouldPlay === 'true') {
-        playMusic();
+        attemptPlay();
     } else {
         updateUI(false);
     }
-
-    // Fallback for autoplay policy
-    const autoPlayFallback = () => {
-        if (shouldPlay === 'true' && bgMusic.paused) {
-            playMusic();
-        }
-        document.removeEventListener('click', autoPlayFallback);
-        document.removeEventListener('keydown', autoPlayFallback);
-    };
-
-    document.addEventListener('click', autoPlayFallback);
-    document.addEventListener('keydown', autoPlayFallback);
 });
