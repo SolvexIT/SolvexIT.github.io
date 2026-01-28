@@ -8,7 +8,12 @@
     --item-size: 50px;  /* Размер иконок */
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent; /* Убирает синий квадрат при нажатии на мобильных */
+}
 
 body {
     /* Основной глубокий градиент под цвет лого */
