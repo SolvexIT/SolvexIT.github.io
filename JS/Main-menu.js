@@ -448,10 +448,9 @@ window.addEventListener('load', () => {
     if (window.location.hash === '#search') {
         startSearchAnimation(true);
     } else {
-        if (!isMenuOpen) {
-            renderItems(menuConfig);
-            setTimeout(() => orbitMenu.classList.add('active'), 100);
-            isMenuOpen = true;
-        }
+        // Prepare items but don't open automatically
+        renderItems(menuConfig);
+        isMenuOpen = false;
+        orbitMenu.classList.remove('active');
     }
 });
