@@ -39,6 +39,7 @@ const tagFilters = document.getElementById('tag-filters');
 let isMenuOpen = false;
 let currentLevel = 'root';
 let historyStack = [];
+let isTransitioning = false; // New flag for animation state
 
 // --- ФАКТЫ И РОТАЦИЯ ---
 const FACT_URL = 'https://gist.githubusercontent.com/SolvexIT/98cac512e240657220e5fde866a392ad/raw';
@@ -154,6 +155,9 @@ function goBack() {
 }
 
 mainToggle.addEventListener('click', () => {
+    // PREVENT INTERACTION DURING TRANSITION
+    if (isTransitioning) return;
+
     // ЕСЛИ МЫ В РЕЖИМЕ ПОИСКА ИЛИ ПРОСМОТРА -> ВОЗВРАТ В МЕНЮ
     if (document.body.classList.contains('search-mode') || document.body.classList.contains('view-mode')) {
         returnToMenu();
@@ -190,6 +194,7 @@ function switchView(viewName, instant = false) {
     mainToggle.style.left = rect.left + 'px';
     mainToggle.style.top = rect.top + 'px';
     mainToggle.classList.add('logo-transitioning');
+    isTransitioning = true;
 
     if (instant) {
         mainToggle.classList.add('logo-phase-3');
@@ -197,6 +202,7 @@ function switchView(viewName, instant = false) {
         headerContent.classList.add('active');
         activateViewContainer(viewName);
         startFactRotation();
+        isTransitioning = false;
         return;
     }
 
@@ -212,6 +218,7 @@ function switchView(viewName, instant = false) {
         headerContent.classList.add('active');
         activateViewContainer(viewName);
         startFactRotation();
+        isTransitioning = false;
     }, 1800);
 }
 
@@ -236,6 +243,9 @@ function startSearchAnimation(instant = false) {
 }
 
 function returnToMenu() {
+    if (isTransitioning) return;
+    isTransitioning = true;
+
     window.location.hash = '';
     stopFactRotation();
     document.body.classList.remove('view-mode');
@@ -275,6 +285,7 @@ function returnToMenu() {
         // Menu stays closed, waiting for user interaction (pulsing logo)
         isMenuOpen = false;
         orbitMenu.classList.remove('active');
+        isTransitioning = false;
     }, 1400);
 }
 
