@@ -36,3 +36,123 @@ body {
 :link:hover {
     text-decoration: underline;
 }
+
+/* --- MUSIC PLAYER --- */
+.music-player {
+    position: fixed;
+    bottom: 30px; /* Немного выше для мобил */
+    right: 25px;
+    z-index: 2147483647; /* Максимальный Z-Index */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Убираем любые ограничения ширины контейнера */
+    width: auto;
+    height: auto;
+}
+
+.music-player-icon {
+    /* ЖЕСТКИЕ РАЗМЕРЫ ДЛЯ ИДЕАЛЬНОГО КРУГА */
+    width: 60px !important;
+    height: 60px !important;
+    min-width: 60px !important;
+    min-height: 60px !important;
+    max-width: 60px !important;
+    max-height: 60px !important;
+    
+    background: rgba(18, 18, 18, 0.9);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    
+    color: var(--accent);
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    
+    font-size: 24px;
+    line-height: 1 !important; /* Убирает лишние отступы шрифта */
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0, 145, 217, 0.3);
+    
+    /* Отключаем выделение при тапе */
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    
+    /* Flex fix */
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.music-player-icon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(0, 145, 217, 0.5);
+}
+
+/* Spinning Animation Class */
+.music-player-icon.spinning {
+    animation: spin 4s linear infinite;
+    border-color: var(--wh-color);
+    color: var(--wh-color);
+    box-shadow: 0 0 25px var(--accent);
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Volume Slider styling */
+.music-controls {
+    /* Убрали visibility: hidden по просьбе "убрать исчезновение" */
+    opacity: 0; 
+    pointer-events: none; /* Чтобы не кликать когда невидимо */
+    
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    
+    position: absolute;
+    bottom: 70px; /* Над кнопкой */
+    background: rgba(0, 0, 0, 0.9);
+    padding: 15px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 50px; /* Узкий вертикальный блок или горизонтальный? Пусть будет контейнер под слайдер */
+    height: 120px; /* Вертикальный слайдер? Нет, оставим горизонтальный в вертикальном блоке, но лучше просто бокс */
+    width: auto;
+    height: auto;
+}
+
+/* Показываем контролы при наведении */
+.music-player:hover .music-controls,
+.music-player:active .music-controls,
+.music-player:focus-within .music-controls {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.volume-slider {
+    width: 100px;
+    cursor: pointer;
+    accent-color: var(--accent);
+    display: block;
+}
+
+/* Mobile Adjustments */
+@media screen and (max-width: 768px) {
+    .music-player {
+        bottom: 30px; 
+        right: 20px;
+    }
+    
+    /* На мобилках можно сделать контролы всегда видимыми, если это имелось в виду?
+       Но "изначально кружок" противоречит этому.
+       Оставим поведение "hover" (которое на мобиле часто триггерится тапом по контейнеру) 
+       или добавим :active. */
+}

@@ -422,40 +422,7 @@ function initSearchEngine() {
     searchInitialized = true;
 }
 
-// --- MUSIC PLAYER LOGIC ---
-const musicPlayer = document.getElementById('musicPlayer');
-const playPauseBtn = document.getElementById('playPauseBtn');
-const volumeSlider = document.getElementById('volumeSlider');
-const bgMusic = document.getElementById('bgMusic');
-
-if(playPauseBtn && bgMusic) {
-    // Load volume
-    const savedVol = localStorage.getItem('musicVolume');
-    if(savedVol !== null) {
-        bgMusic.volume = parseFloat(savedVol);
-        volumeSlider.value = savedVol;
-    } else {
-        bgMusic.volume = 0.2; // Default quiet
-    }
-
-    playPauseBtn.addEventListener('click', () => {
-        if(bgMusic.paused) {
-            bgMusic.play();
-            playPauseBtn.classList.remove('fa-music');
-            playPauseBtn.classList.add('fa-pause');
-            // Adding a spin animation class if desired
-        } else {
-            bgMusic.pause();
-            playPauseBtn.classList.remove('fa-pause');
-            playPauseBtn.classList.add('fa-music');
-        }
-    });
-
-    volumeSlider.addEventListener('input', (e) => {
-        bgMusic.volume = e.target.value;
-        localStorage.setItem('musicVolume', e.target.value);
-    });
-}
+/* --- MUSIC PLAYER LOGIC MOVED TO JS/music-player.js --- */
 
 
 // --- INITIALIZATION ---
