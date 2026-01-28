@@ -53,14 +53,14 @@ body {
     50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(0, 145, 217, 0.4); }
 }
 
-/* Останавливаем пульсацию, когда меню открыто или в режиме перехода */
-.orbit-menu.active .main-toggle,
+/* Останавливаем пульсацию только в режиме перехода в поиск */
 .logo-transitioning {
     animation: none !important;
 }
 
 .main-toggle:hover {
-    transform: scale(1.15);
+    animation: none !important; /* Отключаем пульс при наведении, чтобы сработал hover-эффект */
+    transform: scale(1.15) rotate(5deg);
     box-shadow: 0 0 40px var(--accent), 0 0 15px var(--wh-color);
 }
 

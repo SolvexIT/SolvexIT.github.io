@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bgMusic.volume = parseFloat(savedVol);
         if (volumeSlider) volumeSlider.value = savedVol;
     } else {
-        bgMusic.volume = 0.2; // Default
+        bgMusic.volume = 0.1; // Default
     }
 
     // 2. Restore Time
