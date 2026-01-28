@@ -282,56 +282,5 @@ body.search-mode {
     100% { transform: translateX(-100%); }
 }
 
-/* --- MUSIC PLAYER (Desktop Only) --- */
-.music-player {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(10, 25, 47, 0.9);
-    border: 1px solid rgba(88, 166, 255, 0.3);
-    border-radius: 30px;
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    z-index: 200;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-    transition: opacity 0.3s;
-}
+/* Music player styles removed from here to avoid conflicts with style.css */
 
-.music-player-icon {
-    font-size: 20px;
-    color: var(--accent);
-    cursor: pointer;
-    width: 24px;
-    text-align: center;
-}
-
-.music-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.volume-slider {
-    width: 60px;
-    height: 4px;
-    background: #333;
-    border-radius: 2px;
-    outline: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-}
-.volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 12px;
-    height: 12px;
-    background: var(--accent);
-    border-radius: 50%;
-}
-
-@media (max-width: 768px) {
-    .music-player {
-        display: none;
-    }
-}
