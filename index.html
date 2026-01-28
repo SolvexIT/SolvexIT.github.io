@@ -43,10 +43,27 @@
 
     <!-- Music Player -->
     <div class="music-player" id="musicPlayer">
-        <i class="fas fa-music music-player-icon" id="playPauseBtn"></i>
-        <div class="music-controls">
+        
+        <!-- Volume Slider (Pops out to the left of the volume button) -->
+        <div class="vol-slider-wrapper" id="volSliderWrapper">
             <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.2">
         </div>
+
+        <!-- Pop-out Actions (Hidden by default) -->
+        <div class="fab-actions" id="fabActions">
+            <button class="action-btn" id="btnVol" title="Громкость">
+                <i class="fas fa-volume-up"></i>
+            </button>
+            <button class="action-btn" id="btnPlay" title="Старт/Стоп">
+                <i class="fas fa-play"></i>
+            </button>
+        </div>
+
+        <!-- Main Trigger Button -->
+        <button class="main-music-btn" id="mainMusicBtn">
+            <i class="fas fa-music"></i>
+        </button>
+
         <audio id="bgMusic" loop>
             <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
         </audio>
