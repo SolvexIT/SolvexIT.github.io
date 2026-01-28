@@ -60,7 +60,8 @@ body {
 }
 
 .main-toggle:hover {
-    transform: scale(1.1);
+    transform: scale(1.15);
+    box-shadow: 0 0 40px var(--accent), 0 0 15px var(--wh-color);
 }
 
 .main-toggle:active { transform: scale(0.9); }
@@ -140,23 +141,4 @@ body {
 
 
 
-body {
-    /* Основной глубокий градиент под цвет лого */
-    background: radial-gradient(circle at center, #0a192f 0%, #050a0f 100%);
-    font-family: 'Segoe UI', sans-serif;
-    min-height: 100vh;
-    overflow: hidden;
-    position: relative;
-}
-
-/* --- АНИМИРОВАННЫЙ ФОН --- */
-.bg-animation {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: -1;
-    background: linear-gradient(45deg, transparent 45%, var(--dark-blue) 50%, transparent 55%);
-    background-size: 200% 200%;
-    animation: bgMove 10s infinite linear;
-    opacity: 0.2;
-}
+/* Background animation handled in style.css */
