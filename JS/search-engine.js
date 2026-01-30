@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let db = []; // База данных
     let selectedTags = new Set(); // Выбранные теги
+    let updateTagsUI_External; // Внешняя ссылка на функцию обновления UI тегов
     
     // ПЕРЕМЕННЫЕ ДЛЯ ОПТИМИЗАЦИИ (Кнопка "Ещё")
     let currentFilteredItems = []; // Текущий список найденного
@@ -90,24 +91,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemsToRender = currentFilteredItems.slice(0, itemsToShow);
 
         itemsToRender.forEach(item => {
-            const card = document.createElement('a');
+            const card = document.createElement('div');
             card.className = 'result-card';
-            card.href = item.link;
-            if(item.link.startsWith('http')) card.target = "_blank";
-
+            
             // Красивые теги внутри карточки
             const tagsHtml = item.tags.split(',').map(tag => `<span class="tag_container">#${tag.trim()}</span>`).join(' ');
 
             card.innerHTML = `
-                <span class="result-title">${item.name}</span>
-                <span class="result-link">${item.link}</span>
-                <div class="result-description">${item.description || ''}</div>
+                <a href="${item.link}" ${item.link.startsWith('http') ? 'target="_blank"' : ''} style="text-decoration: none; color: inherit; display: block;">
+                    <span class="result-title">${item.name}</span>
+                    <span class="result-link">${item.link}</span>
+                    <div class="result-description">${item.description || ''}</div>
+                </a>
                 <div class="result-tags">${tagsHtml}</div>
             `;
             
             // Анимацию можно оставить, если карточек немного
             card.style.animation = "fadeIn 0.5s ease";
             resultsArea.appendChild(card);
+
+            // Добавляем обработчик клика на теги внутри карточки
+            card.querySelectorAll('.result-tags .tag_container').forEach(tagEl => {
+                tagEl.addEventListener('click', (e) => {
+                    // e.preventDefault() не нужен, так как это span
+                    const tag = tagEl.textContent.replace('#', '').trim();
+                    selectedTags.add(tag);
+                    if (updateTagsUI_External) updateTagsUI_External();
+                });
+            });
         });
 
         // --- МАГИЯ КНОПКИ "ПОКАЗАТЬ ЕЩЁ" ---
@@ -209,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderAvailableTags(tagSearchInput.value);
             filterAndRender(); // <-- Самое важное: запускаем поиск
         }
+        updateTagsUI_External = updateTagsUI;
 
         tagSearchInput.addEventListener('input', (e) => {
             renderAvailableTags(e.target.value);
