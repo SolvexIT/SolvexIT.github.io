@@ -290,8 +290,143 @@ function returnToMenu() {
 }
 
 
-// --- ПОИСКОВОЙ ДВИЖОК ---
+// --- ПОИСКОВОЙ ДВИЖОК И КОНТЕНТ ---
 let searchInitialized = false;
+const contentBaseUrl = 'https://raw.githubusercontent.com/SolvexIT/inst_cloud/main/';
+
+// Простой парсер Markdown
+function parseMarkdown(lines) {
+    if (!Array.isArray(lines)) return '';
+    let html = '';
+    let inCodeBlock = false;
+
+    lines.forEach(line => {
+        // Code blocks
+        if (line.trim().startsWith('```')) {
+            inCodeBlock = !inCodeBlock;
+            html += inCodeBlock ? '<pre><code>' : '</code></pre>';
+            return;
+        }
+        if (inCodeBlock) {
+            html += line + '\n';
+            return;
+        }
+
+        // HTML escaping
+        let processedLine = line
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+
+        // Headers
+        if (processedLine.startsWith('### ')) processedLine = `<h3>${processedLine.substring(4)}</h3>`;
+        else if (processedLine.startsWith('## ')) processedLine = `<h2>${processedLine.substring(3)}</h2>`;
+        else if (processedLine.startsWith('# ')) processedLine = `<h1>${processedLine.substring(2)}</h1>`;
+        
+        // Bold
+        processedLine = processedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Quotes
+        if (processedLine.startsWith('&gt; ')) processedLine = `<blockquote>${processedLine.substring(5)}</blockquote>`;
+
+        // Paragraphs
+        if (line.trim() === '') {
+            html += '<br>';
+        } else if (!processedLine.startsWith('<')) {
+            html += `<p>${processedLine}</p>`;
+        } else {
+            html += processedLine;
+        }
+    });
+    return html;
+}
+
+// Открытие инструкции
+function openInstruction(resourcePath) {
+    const instructionsContainer = document.getElementById('instructionsContainer');
+    const searchResultsContainer = document.getElementById('searchResultsContainer');
+    const instructionsContent = document.getElementById('instructionsContent');
+    
+    // Switch views
+    if (searchResultsContainer) searchResultsContainer.classList.remove('active');
+    if (instructionsContainer) instructionsContainer.classList.add('active');
+    
+    // Switch to search mode view if not already
+    if (!document.body.classList.contains('view-mode')) {
+         startSearchAnimation(true);
+    }
+    
+    if (instructionsContent) {
+        instructionsContent.innerHTML = '<div class="loading" style="text-align:center; padding:20px; color:#888;">Загрузка информации...</div>';
+    }
+
+    // Prepare URL
+    let finalPath = resourcePath.replace(/^\/+/, '');
+    
+    // Update URL with Query Param (cleaner than hash)
+    // Extract ID from path (remove extension if present)
+    const id = finalPath.replace(/\.json$/, '');
+    const newUrl = `${window.location.pathname}?instruction=${id}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+
+    if (!finalPath.endsWith('.json')) finalPath += '.json';
+    const fullUrl = contentBaseUrl + finalPath;
+
+    fetch(fullUrl)
+        .then(res => {
+            if(!res.ok) throw new Error('Не удалось загрузить файл инструкции');
+            return res.json();
+        })
+        .then(data => {
+            const contentHtml = parseMarkdown(data.content);
+            
+            let headerHtml = '';
+            if (data.info) {
+                 headerHtml = `<div class="instruction-header" style="margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
+                    <h1 style="color:#58A6FF;">${data.info.title}</h1>
+                    <div class="meta-info" style="color:#888; font-size:0.9em; margin-top:5px;">
+                        <span style="margin-right:15px;"><i class="fas fa-user"></i> ${data.info.author}</span>
+                        <span style="margin-right:15px;"><i class="fas fa-code-branch"></i> v${data.info.version}</span>
+                        <span><i class="far fa-calendar-alt"></i> ${data.info.last_updated}</span>
+                    </div>
+                 </div>`;
+            }
+
+            let linksHtml = '';
+            if (data.links) {
+                linksHtml = '<div class="instruction-links" style="margin-top:20px; padding-top:10px; border-top:1px solid #333;">';
+                for (const [key, url] of Object.entries(data.links)) {
+                    linksHtml += `<a href="${url}" target="_blank" class="download-btn" style="display:inline-block; padding:10px 20px; background:#238636; color:white; text-decoration:none; border-radius:6px; margin-right:10px;"><i class="fas fa-download"></i> ${key}</a> `;
+                }
+                linksHtml += '</div>';
+            }
+
+            const backBtnHtml = `<button onclick="closeInstruction()" style="margin-bottom:20px; background:none; border:none; color:#58A6FF; cursor:pointer; font-size:16px;"><i class="fas fa-arrow-left"></i> Назад к поиску</button>`;
+            
+            instructionsContent.innerHTML = backBtnHtml + headerHtml + contentHtml + linksHtml;
+        })
+        .catch(err => {
+            console.error(err);
+            instructionsContent.innerHTML = `<div class="error-msg" style="color:#ff6b6b; text-align:center;">
+                <h3>Ошибка загрузки</h3>
+                <p>${err.message}</p>
+                <button onclick="closeInstruction()" style="margin-top:20px; padding:8px 16px; background:#333; color:white; border:none; cursor:pointer;">Назад</button>
+            </div>`;
+        });
+}
+
+// Global function to close instruction
+window.closeInstruction = function() {
+    const instructionsContainer = document.getElementById('instructionsContainer');
+    const searchResultsContainer = document.getElementById('searchResultsContainer');
+    
+    // Clear Query Param
+    const newUrl = window.location.pathname;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+
+    if (instructionsContainer) instructionsContainer.classList.remove('active');
+    if (searchResultsContainer) searchResultsContainer.classList.add('active');
+};
 
 function initSearchEngine() {
     if (searchInitialized) return;
@@ -300,11 +435,17 @@ function initSearchEngine() {
     const resultsArea = document.getElementById('results-area');
     const toggleTagsBtn = document.getElementById('toggleTagsBtn');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const instructionsContainer = document.getElementById('instructionsContainer');
+    const searchResultsContainer = document.getElementById('searchResultsContainer');
 
     // Listeners for Buttons
-    toggleTagsBtn.onclick = () => tagFilters.classList.toggle('active');
+    toggleTagsBtn.onclick = () => {
+        const tagFilters = document.getElementById('tag-filters');
+        if (tagFilters) tagFilters.classList.toggle('active');
+    };
     clearSearchBtn.onclick = () => {
         searchInput.value = '';
+        closeInstruction(); // Use global close to handle state/url
         filterAndRender();
         searchInput.focus();
     };
@@ -314,7 +455,7 @@ function initSearchEngine() {
     let currentFilteredItems = [];
     let itemsToShow = 5;
     const loadMoreStep = 10;
-    let updateTagsUI; // Ссылка на функцию обновления UI тегов
+    let updateTagsUI; 
 
     // Загрузка БД
     fetch('https://gist.githubusercontent.com/SolvexIT/6c9d9ebc89835f8812cfb66d18268324/raw')
@@ -330,6 +471,10 @@ function initSearchEngine() {
     let timeout;
     searchInput.addEventListener('input', () => {
         clearTimeout(timeout);
+        // При вводе возвращаемся к результатам
+        if (instructionsContainer && instructionsContainer.classList.contains('active')) {
+             closeInstruction();
+        }
         timeout = setTimeout(filterAndRender, 300);
     });
 
@@ -361,9 +506,9 @@ function initSearchEngine() {
         }
 
         currentFilteredItems.slice(0, itemsToShow).forEach(item => {
-            const card = document.createElement('div'); // Карточка теперь div
+            const card = document.createElement('div');
             card.className = 'result-card';
-            card.style.cursor = 'pointer'; // Указываем, что вся карта кликабельна
+            card.style.cursor = 'pointer'; 
 
             const tagsHtml = item.tags.split(',').map(tag => {
                 const trimmedTag = tag.trim();
@@ -371,9 +516,8 @@ function initSearchEngine() {
                 return `<span class="tag_container ${isActive}">#${trimmedTag}</span>`;
             }).join(' ');
             
-            // Оборачиваем контент в ссылку, теги отдельно
             card.innerHTML = `
-                <a href="${item.link}" ${item.link.startsWith('http') ? 'target="_blank"' : ''} style="text-decoration: none; color: inherit; display: block;">
+                <a href="${item.link}" ${item.link.startsWith('http') ? 'target="_blank"' : ''} style="text-decoration: none; color: inherit; display: block;" class="card-link">
                     <span class="result-title">${item.name}</span>
                     <span class="result-link">${item.link}</span>
                     <div class="result-description">${item.description || ''}</div>
@@ -383,33 +527,26 @@ function initSearchEngine() {
             
             card.style.animation = "fadeIn 0.5s ease";
             
-            // Клик по всей карточке (фон, паддинги)
             card.addEventListener('click', (e) => {
-                // Если клик был по ссылке внутри или по тегу - ничего не делаем (они сами обработают)
-                if (e.target.closest('a') || e.target.closest('.tag_container')) return;
+                if (e.target.closest('.tag_container')) return;
                 
-                // Иначе переходим по ссылке
+                e.preventDefault(); 
+
                 if (item.link.startsWith('http')) {
                     window.open(item.link, '_blank');
                 } else {
-                    window.location.href = item.link;
+                    openInstruction(item.link);
                 }
             });
 
             resultsArea.appendChild(card);
 
-            // Обработчик клика по тегам
             card.querySelectorAll('.result-tags .tag_container').forEach(tagEl => {
                 tagEl.addEventListener('click', (e) => {
                     e.stopPropagation(); 
                     const tag = tagEl.textContent.replace('#', '').trim();
-                    
-                    // Переключаем тег: если есть - удаляем, если нет - добавляем
-                    if (selectedTags.has(tag)) {
-                        selectedTags.delete(tag);
-                    } else {
-                        selectedTags.add(tag);
-                    }
+                    if (selectedTags.has(tag)) selectedTags.delete(tag);
+                    else selectedTags.add(tag);
 
                     if (updateTagsUI) updateTagsUI();
                     filterAndRender();
@@ -430,8 +567,8 @@ function initSearchEngine() {
         const allTags = new Set();
         data.forEach(item => item.tags.split(',').forEach(tag => allTags.add(tag.trim())));
         const sortedTags = Array.from(allTags).sort();
+        const tagFilters = document.getElementById('tag-filters');
 
-        // Populate the container in the header
         tagFilters.innerHTML = `
             <input type="text" id="tagSearchInput" class="tag-search-input" placeholder="Фильтр..." style="width:100%; margin-bottom:10px; background:#1e1e1e; border:1px solid #444; color:white; padding:5px; border-radius:4px;">
             <div id="available-tags" class="available-tags" style="max-height:150px; overflow-y:auto;"></div>
@@ -477,7 +614,7 @@ function initSearchEngine() {
                 availDiv.appendChild(a);
             });
         }
-        updateTagsUI = updateUI; // Expose updateUI
+        updateTagsUI = updateUI; 
 
         tagInput.addEventListener('input', updateUI);
         updateUI();
@@ -506,7 +643,15 @@ function initSearchEngine() {
 
 // --- INITIALIZATION ---
 window.addEventListener('load', () => {
-    if (window.location.hash === '#search') {
+    // Check for query param first
+    const urlParams = new URLSearchParams(window.location.search);
+    const instructionId = urlParams.get('instruction');
+
+    if (instructionId) {
+        // Direct open instruction
+        startSearchAnimation(true);
+        setTimeout(() => openInstruction(instructionId), 100); // Small delay to ensure containers are ready
+    } else if (window.location.hash === '#search') {
         startSearchAnimation(true);
     } else {
         // Prepare items but don't open automatically
