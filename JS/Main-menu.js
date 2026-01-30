@@ -314,6 +314,7 @@ function initSearchEngine() {
     let currentFilteredItems = [];
     let itemsToShow = 5;
     const loadMoreStep = 10;
+    let updateTagsUI; // Ссылка на функцию обновления UI тегов
 
     // Загрузка БД
     fetch('https://gist.githubusercontent.com/SolvexIT/6c9d9ebc89835f8812cfb66d18268324/raw')
@@ -360,20 +361,60 @@ function initSearchEngine() {
         }
 
         currentFilteredItems.slice(0, itemsToShow).forEach(item => {
-            const card = document.createElement('a');
+            const card = document.createElement('div'); // Карточка теперь div
             card.className = 'result-card';
-            card.href = item.link;
-            if(item.link.startsWith('http')) card.target = "_blank";
+            card.style.cursor = 'pointer'; // Указываем, что вся карта кликабельна
 
-            const tagsHtml = item.tags.split(',').map(tag => `<span class="tag_container">#${tag.trim()}</span>`).join(' ');
+            const tagsHtml = item.tags.split(',').map(tag => {
+                const trimmedTag = tag.trim();
+                const isActive = selectedTags.has(trimmedTag) ? 'is-active' : '';
+                return `<span class="tag_container ${isActive}">#${trimmedTag}</span>`;
+            }).join(' ');
+            
+            // Оборачиваем контент в ссылку, теги отдельно
             card.innerHTML = `
-                <span class="result-title">${item.name}</span>
-                <span class="result-link">${item.link}</span>
-                <div class="result-description">${item.description || ''}</div>
-                <div class="result-tags">${tagsHtml}</div>
+                <a href="${item.link}" ${item.link.startsWith('http') ? 'target="_blank"' : ''} style="text-decoration: none; color: inherit; display: block;">
+                    <span class="result-title">${item.name}</span>
+                    <span class="result-link">${item.link}</span>
+                    <div class="result-description">${item.description || ''}</div>
+                </a>
+                <div class="result-tags" style="margin-top: 8px;">${tagsHtml}</div>
             `;
+            
             card.style.animation = "fadeIn 0.5s ease";
+            
+            // Клик по всей карточке (фон, паддинги)
+            card.addEventListener('click', (e) => {
+                // Если клик был по ссылке внутри или по тегу - ничего не делаем (они сами обработают)
+                if (e.target.closest('a') || e.target.closest('.tag_container')) return;
+                
+                // Иначе переходим по ссылке
+                if (item.link.startsWith('http')) {
+                    window.open(item.link, '_blank');
+                } else {
+                    window.location.href = item.link;
+                }
+            });
+
             resultsArea.appendChild(card);
+
+            // Обработчик клика по тегам
+            card.querySelectorAll('.result-tags .tag_container').forEach(tagEl => {
+                tagEl.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    const tag = tagEl.textContent.replace('#', '').trim();
+                    
+                    // Переключаем тег: если есть - удаляем, если нет - добавляем
+                    if (selectedTags.has(tag)) {
+                        selectedTags.delete(tag);
+                    } else {
+                        selectedTags.add(tag);
+                    }
+
+                    if (updateTagsUI) updateTagsUI();
+                    filterAndRender();
+                });
+            });
         });
 
         if (currentFilteredItems.length > itemsToShow) {
@@ -436,6 +477,7 @@ function initSearchEngine() {
                 availDiv.appendChild(a);
             });
         }
+        updateTagsUI = updateUI; // Expose updateUI
 
         tagInput.addEventListener('input', updateUI);
         updateUI();
@@ -444,7 +486,15 @@ function initSearchEngine() {
     if (!document.getElementById('dynamic-styles')) {
         const s = document.createElement("style");
         s.id = 'dynamic-styles';
-        s.innerText = `@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`;
+        s.innerText = `
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            .tag_container.is-active {
+                background: rgba(0, 145, 217, 0.5) !important;
+                border-color: rgba(0, 145, 217, 0.8) !important;
+                color: white !important;
+                box-shadow: 0 0 10px rgba(0, 145, 217, 0.3);
+            }
+        `;
         document.head.appendChild(s);
     }
 

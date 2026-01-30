@@ -272,6 +272,8 @@ body {
     display: inline-block;
     font-size: 0.85rem;
     transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
 }
 
 .tag_container:hover {
