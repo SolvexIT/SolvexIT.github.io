@@ -216,21 +216,60 @@ function switchView(viewName, instant = false) {
     }, 1800);
 }
 
-function activateViewContainer(viewName) {
-    searchResultsContainer.classList.remove('active');
-    const instructionsContainer = document.getElementById('instructionsContainer');
-    if (instructionsContainer) instructionsContainer.classList.remove('active');
+// Global reference to re-trigger render
+let globalFilterAndRender = null;
 
+function activateViewContainer(viewName) {
+    const searchResultsContainer = document.getElementById('searchResultsContainer');
+    const instructionsContainer = document.getElementById('instructionsContainer');
+    
     if (viewName === 'search') {
+        if (instructionsContainer) {
+            instructionsContainer.classList.remove('active');
+            setTimeout(() => { instructionsContainer.style.display = 'none'; }, 500);
+        }
+
         initSearchEngine();
-        searchResultsContainer.classList.add('active');
-        document.body.classList.add('search-mode');
-        if(headerSearch) headerSearch.style.display = 'flex';
-        if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
-    } else if (viewName === 'instructions') {
-        if (instructionsContainer) instructionsContainer.classList.add('active');
-        if(headerSearch) headerSearch.style.display = 'none';
         
+        // RE-RENDER CONTENT: If returning to search, make sure content is visible
+        if (globalFilterAndRender) {
+            globalFilterAndRender();
+        }
+
+        if (searchResultsContainer) {
+            searchResultsContainer.style.display = 'flex';
+            void searchResultsContainer.offsetWidth; 
+            searchResultsContainer.classList.add('active');
+        }
+        
+        if(headerSearch) {
+            headerSearch.style.display = 'flex';
+            headerSearch.style.opacity = '0';
+            headerSearch.style.transform = 'translateX(20px)';
+            void headerSearch.offsetWidth;
+            headerSearch.style.opacity = '';
+            headerSearch.style.transform = '';
+        }
+
+        document.body.classList.add('search-mode');
+        if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
+        
+    } else if (viewName === 'instructions') {
+        if (searchResultsContainer) {
+            searchResultsContainer.classList.remove('active');
+            setTimeout(() => { searchResultsContainer.style.display = 'none'; }, 500);
+        }
+
+        if (instructionsContainer) {
+            instructionsContainer.style.display = 'flex';
+            void instructionsContainer.offsetWidth; 
+            instructionsContainer.classList.add('active');
+        }
+        
+        if(headerSearch) headerSearch.style.display = 'none';
+        const resultsArea = document.getElementById('results-area');
+        if (resultsArea) resultsArea.innerHTML = ''; 
+
         if(!headerBackBtn) {
             headerBackBtn = document.createElement('button');
             headerBackBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
@@ -254,14 +293,12 @@ function activateViewContainer(viewName) {
     }
 }
 
+// ROUTING HELPER
 function setHash(hash) {
     if (window.location.hash !== hash) {
         isInternalRouteUpdate = true;
         window.location.hash = hash;
-        // Keep flag true for a short time to block both hashchange and popstate events
-        setTimeout(() => {
-            isInternalRouteUpdate = false;
-        }, 300);
+        setTimeout(() => { isInternalRouteUpdate = false; }, 300);
     }
 }
 
@@ -287,9 +324,18 @@ function returnToMenu() {
     if(input) input.blur();
 
     headerContent.classList.remove('active');
-    searchResultsContainer.classList.remove('active');
+    
+    // Hide containers
+    const searchResultsContainer = document.getElementById('searchResultsContainer');
     const instructionsContainer = document.getElementById('instructionsContainer');
-    if (instructionsContainer) instructionsContainer.classList.remove('active');
+    if (searchResultsContainer) {
+        searchResultsContainer.classList.remove('active');
+        setTimeout(() => { searchResultsContainer.style.display = 'none'; }, 500);
+    }
+    if (instructionsContainer) {
+        instructionsContainer.classList.remove('active');
+        setTimeout(() => { instructionsContainer.style.display = 'none'; }, 500);
+    }
     
     if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
     if(headerSearch) headerSearch.style.display = 'flex';
@@ -365,6 +411,9 @@ function parseMarkdown(lines) {
 function openInstruction(resourcePath) {
     const instructionsContent = document.getElementById('instructionsContent');
     
+    const clearBtn = document.getElementById('clearSearchBtn');
+    if (clearBtn) clearBtn.click();
+
     if (!document.body.classList.contains('view-mode')) {
          switchView('search', true);
     }
@@ -376,7 +425,11 @@ function openInstruction(resourcePath) {
 
     const finalPath = resourcePath.replace(/^\/+/, '');
     const id = finalPath.replace(/\.json$/, '');
-    setHash('#/docs/' + id); // Use Hash
+    
+    const url = new URL(window.location);
+    url.search = '';
+    url.hash = '#/docs/' + id;
+    window.history.pushState({}, '', url.toString());
 
     const fullUrl = contentBaseUrl + (finalPath.endsWith('.json') ? finalPath : finalPath + '.json');
 
@@ -442,8 +495,8 @@ function initSearchEngine() {
         selectedTags.clear();
         updateURLState({ search: null, tags: null });
         if(updateTagsUI) updateTagsUI();
-        if (instructionsContainer && instructionsContainer.classList.contains('active')) closeInstruction();
-        else filterAndRender();
+        if (resultsArea) resultsArea.innerHTML = '';
+        filterAndRender();
         searchInput.focus();
     };
 
@@ -497,6 +550,9 @@ function initSearchEngine() {
         if (reset) itemsToShow = loadMoreStep;
         renderResults();
     }
+    
+    // Assign global reference
+    globalFilterAndRender = filterAndRender;
 
     function renderResults() {
         resultsArea.innerHTML = '';
@@ -650,7 +706,6 @@ window.addEventListener('load', () => {
 });
 
 function handleRouting() {
-    // If update was triggered internally, just reset flag and return
     if (isInternalRouteUpdate) return;
 
     const hash = window.location.hash;
@@ -660,7 +715,7 @@ function handleRouting() {
     if (hash === '#/search') {
         startSearchAnimation(true);
     } else if (hash.startsWith('#/docs/') && hash.length > 7) {
-        const path = hash.substring(7); // remove #/docs/
+        const path = hash.substring(7);
         if (!document.body.classList.contains('view-mode')) {
             startSearchAnimation(true);
         }
