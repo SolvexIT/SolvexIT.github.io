@@ -4,22 +4,22 @@
     <meta charset="utf-8">
     <title>Redirecting...</title>
     <script>
-      // Single Page Apps for GitHub Pages
-      // MIT License
-      // https://github.com/rafrex/spa-github-pages
-      // This script takes the current url and converts the path and query
-      // string into just a query string, and then redirects the browser
-      // to the new url with a special query parameter and hash.
-      var pathSegmentsToKeep = 0;
-
+      // 404.html для GitHub Pages: перенаправление на Hash Router
+      // Пример: /search -> /#/search
+      // Пример: /docs/example -> /#/docs/example
       var l = window.location;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      var path = l.pathname;
+      var repoName = '/'; // Если сайт в корне, то '/'.
+      
+      // Если сайт в подпапке (например, /repo-name/), нужно учесть это
+      // Здесь мы предполагаем корень (username.github.io)
+      
+      if (path !== '/' && path !== '/index.html') {
+          // Убираем начальный слеш, если он есть
+          var route = path; 
+          // Редирект на главную с добавлением хеша
+          l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/#' + route + l.search + l.hash);
+      }
     </script>
   </head>
   <body>

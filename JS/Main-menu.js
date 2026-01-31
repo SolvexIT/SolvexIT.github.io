@@ -44,7 +44,7 @@ let isMenuOpen = false;
 let currentLevel = 'root';
 let historyStack = [];
 let isTransitioning = false;
-let isInternalRouteUpdate = false; // Flag to prevent routing loops and animation breaks
+let isInternalRouteUpdate = false; 
 
 // --- ФАКТЫ И РОТАЦИЯ ---
 const FACT_URL = 'https://gist.githubusercontent.com/SolvexIT/98cac512e240657220e5fde866a392ad/raw';
@@ -376,7 +376,7 @@ function openInstruction(resourcePath) {
 
     const finalPath = resourcePath.replace(/^\/+/, '');
     const id = finalPath.replace(/\.json$/, '');
-    setHash('#/' + id);
+    setHash('#/docs/' + id); // Use Hash
 
     const fullUrl = contentBaseUrl + (finalPath.endsWith('.json') ? finalPath : finalPath + '.json');
 
@@ -650,7 +650,7 @@ window.addEventListener('load', () => {
 });
 
 function handleRouting() {
-    // If update was triggered internally, ignore external event handling
+    // If update was triggered internally, just reset flag and return
     if (isInternalRouteUpdate) return;
 
     const hash = window.location.hash;
@@ -659,8 +659,8 @@ function handleRouting() {
 
     if (hash === '#/search') {
         startSearchAnimation(true);
-    } else if (hash.startsWith('#/') && hash.length > 2) {
-        const path = hash.substring(2);
+    } else if (hash.startsWith('#/docs/') && hash.length > 7) {
+        const path = hash.substring(7); // remove #/docs/
         if (!document.body.classList.contains('view-mode')) {
             startSearchAnimation(true);
         }
