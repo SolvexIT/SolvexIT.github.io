@@ -35,11 +35,16 @@ const headerContent = document.getElementById('headerContent');
 const randomFactEl = document.getElementById('randomFact');
 const searchResultsContainer = document.getElementById('searchResultsContainer');
 const tagFilters = document.getElementById('tag-filters');
+const headerSearch = document.querySelector('.header-search');
+
+// Back Button for Instruction Mode (Dynamic)
+let headerBackBtn = null;
 
 let isMenuOpen = false;
 let currentLevel = 'root';
 let historyStack = [];
-let isTransitioning = false; // New flag for animation state
+let isTransitioning = false;
+let isInternalRouteUpdate = false; // Flag to prevent routing loops and animation breaks
 
 // --- ФАКТЫ И РОТАЦИЯ ---
 const FACT_URL = 'https://gist.githubusercontent.com/SolvexIT/98cac512e240657220e5fde866a392ad/raw';
@@ -57,15 +62,13 @@ async function fetchFact() {
             const randomIndex = Math.floor(Math.random() * factsCache.length);
             const text = factsCache[randomIndex].text;
 
-            // Анимация смены текста
             randomFactEl.style.opacity = 0;
             
             setTimeout(() => {
-                randomFactEl.classList.remove('scroll-active'); // Reset scroll
+                randomFactEl.classList.remove('scroll-active');
                 randomFactEl.innerHTML = `<span>${text}</span>`;
                 randomFactEl.style.opacity = 1;
 
-                // Desktop Scroll Logic if text is long
                 if (window.innerWidth > 768 && text.length > 60) {
                     randomFactEl.classList.add('scroll-active');
                 }
@@ -80,7 +83,7 @@ async function fetchFact() {
 function startFactRotation() {
     fetchFact();
     stopFactRotation();
-    factInterval = setInterval(fetchFact, 25000); // 25 seconds
+    factInterval = setInterval(fetchFact, 25000);
 }
 
 function stopFactRotation() {
@@ -155,10 +158,8 @@ function goBack() {
 }
 
 mainToggle.addEventListener('click', () => {
-    // PREVENT INTERACTION DURING TRANSITION
     if (isTransitioning) return;
 
-    // ЕСЛИ МЫ В РЕЖИМЕ ПОИСКА ИЛИ ПРОСМОТРА -> ВОЗВРАТ В МЕНЮ
     if (document.body.classList.contains('search-mode') || document.body.classList.contains('view-mode')) {
         returnToMenu();
         return;
@@ -180,16 +181,11 @@ mainToggle.addEventListener('click', () => {
 
 
 // --- АНИМАЦИЯ ПЕРЕХОДА (SPA) ---
-// Generic View Switcher
 function switchView(viewName, instant = false) {
-    window.location.hash = viewName;
-    
-    // 1. Hide Menu
     orbitMenu.classList.remove('active');
     isMenuOpen = false;
-    document.body.classList.add('view-mode'); // Generic class instead of search-mode
+    document.body.classList.add('view-mode');
 
-    // 2. Fix Logo Position
     const rect = mainToggle.getBoundingClientRect();
     mainToggle.style.left = rect.left + 'px';
     mainToggle.style.top = rect.top + 'px';
@@ -206,14 +202,12 @@ function switchView(viewName, instant = false) {
         return;
     }
 
-    void mainToggle.offsetWidth; // Reflow
+    void mainToggle.offsetWidth;
 
-    // 3. Animation Sequence
     setTimeout(() => mainToggle.classList.add('logo-phase-1'), 50);
     setTimeout(() => mainToggle.classList.add('logo-phase-3'), 850);
     setTimeout(() => headerBg.classList.add('active'), 850);
 
-    // 4. Show Specific Content
     setTimeout(() => {
         headerContent.classList.add('active');
         activateViewContainer(viewName);
@@ -223,22 +217,58 @@ function switchView(viewName, instant = false) {
 }
 
 function activateViewContainer(viewName) {
-    // Hide all views first
     searchResultsContainer.classList.remove('active');
     const instructionsContainer = document.getElementById('instructionsContainer');
     if (instructionsContainer) instructionsContainer.classList.remove('active');
 
-    // Show target view
     if (viewName === 'search') {
         initSearchEngine();
         searchResultsContainer.classList.add('active');
-        document.body.classList.add('search-mode'); // Keep for search-specific styles if any
+        document.body.classList.add('search-mode');
+        if(headerSearch) headerSearch.style.display = 'flex';
+        if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
     } else if (viewName === 'instructions') {
         if (instructionsContainer) instructionsContainer.classList.add('active');
+        if(headerSearch) headerSearch.style.display = 'none';
+        
+        if(!headerBackBtn) {
+            headerBackBtn = document.createElement('button');
+            headerBackBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
+            headerBackBtn.className = 'header-back-btn';
+            headerBackBtn.style.position = 'fixed';
+            headerBackBtn.style.top = '25px';
+            headerBackBtn.style.left = '90px';
+            headerBackBtn.style.zIndex = '110';
+            headerBackBtn.style.background = 'none';
+            headerBackBtn.style.border = 'none';
+            headerBackBtn.style.color = '#58A6FF';
+            headerBackBtn.style.fontSize = '24px';
+            headerBackBtn.style.cursor = 'pointer';
+            headerBackBtn.style.transition = 'transform 0.2s';
+            headerBackBtn.onmouseover = () => headerBackBtn.style.transform = 'translateX(-3px)';
+            headerBackBtn.onmouseout = () => headerBackBtn.style.transform = 'translateX(0)';
+            
+            headerBackBtn.onclick = closeInstruction;
+            document.body.appendChild(headerBackBtn);
+        }
+    }
+}
+
+function setHash(hash) {
+    if (window.location.hash !== hash) {
+        isInternalRouteUpdate = true;
+        window.location.hash = hash;
+        // Keep flag true for a short time to block both hashchange and popstate events
+        setTimeout(() => {
+            isInternalRouteUpdate = false;
+        }, 300);
     }
 }
 
 function startSearchAnimation(instant = false) {
+    if (!window.location.hash.startsWith('#/docs/')) {
+         setHash('#/search');
+    }
     switchView('search', instant);
 }
 
@@ -246,35 +276,34 @@ function returnToMenu() {
     if (isTransitioning) return;
     isTransitioning = true;
 
-    window.location.hash = '';
+    // Clear hash without reload
+    history.pushState("", document.title, window.location.pathname + window.location.search);
+
     stopFactRotation();
     document.body.classList.remove('view-mode');
     document.body.classList.remove('search-mode');
 
-    // Blur Input & Reset
     const input = document.getElementById('searchInput');
     if(input) input.blur();
 
-    // 1. Hide Content
     headerContent.classList.remove('active');
     searchResultsContainer.classList.remove('active');
     const instructionsContainer = document.getElementById('instructionsContainer');
     if (instructionsContainer) instructionsContainer.classList.remove('active');
     
+    if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
+    if(headerSearch) headerSearch.style.display = 'flex';
     tagFilters.classList.remove('active');
 
-    // 2. Hide Header BG
     setTimeout(() => {
         headerBg.classList.remove('active');
     }, 400);
 
-    // 3. Return Logo to Center
     setTimeout(() => {
         mainToggle.classList.remove('logo-phase-3');
         mainToggle.classList.remove('logo-phase-1');
     }, 600);
 
-    // 4. Clean up styles
     setTimeout(() => {
         mainToggle.classList.remove('logo-transitioning');
         mainToggle.style.left = '';
@@ -282,7 +311,6 @@ function returnToMenu() {
         mainToggle.style.transform = '';
 
         renderItems(menuConfig);
-        // Menu stays closed, waiting for user interaction (pulsing logo)
         isMenuOpen = false;
         orbitMenu.classList.remove('active');
         isTransitioning = false;
@@ -293,15 +321,23 @@ function returnToMenu() {
 // --- ПОИСКОВОЙ ДВИЖОК И КОНТЕНТ ---
 let searchInitialized = false;
 const contentBaseUrl = 'https://raw.githubusercontent.com/SolvexIT/inst_cloud/main/';
+let dbGlobal = [];
 
-// Простой парсер Markdown
+function updateURLState(params) {
+    const url = new URL(window.location);
+    Object.keys(params).forEach(key => {
+        if (params[key]) url.searchParams.set(key, params[key]);
+        else url.searchParams.delete(key);
+    });
+    window.history.replaceState({}, '', url);
+}
+
 function parseMarkdown(lines) {
     if (!Array.isArray(lines)) return '';
     let html = '';
     let inCodeBlock = false;
 
     lines.forEach(line => {
-        // Code blocks
         if (line.trim().startsWith('```')) {
             inCodeBlock = !inCodeBlock;
             html += inCodeBlock ? '<pre><code>' : '</code></pre>';
@@ -312,65 +348,37 @@ function parseMarkdown(lines) {
             return;
         }
 
-        // HTML escaping
-        let processedLine = line
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
-
-        // Headers
+        let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         if (processedLine.startsWith('### ')) processedLine = `<h3>${processedLine.substring(4)}</h3>`;
         else if (processedLine.startsWith('## ')) processedLine = `<h2>${processedLine.substring(3)}</h2>`;
         else if (processedLine.startsWith('# ')) processedLine = `<h1>${processedLine.substring(2)}</h1>`;
-        
-        // Bold
         processedLine = processedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        // Quotes
         if (processedLine.startsWith('&gt; ')) processedLine = `<blockquote>${processedLine.substring(5)}</blockquote>`;
 
-        // Paragraphs
-        if (line.trim() === '') {
-            html += '<br>';
-        } else if (!processedLine.startsWith('<')) {
-            html += `<p>${processedLine}</p>`;
-        } else {
-            html += processedLine;
-        }
+        if (line.trim() === '') html += '<br>';
+        else if (!processedLine.startsWith('<')) html += `<p>${processedLine}</p>`;
+        else html += processedLine;
     });
     return html;
 }
 
-// Открытие инструкции
 function openInstruction(resourcePath) {
-    const instructionsContainer = document.getElementById('instructionsContainer');
-    const searchResultsContainer = document.getElementById('searchResultsContainer');
     const instructionsContent = document.getElementById('instructionsContent');
     
-    // Switch views
-    if (searchResultsContainer) searchResultsContainer.classList.remove('active');
-    if (instructionsContainer) instructionsContainer.classList.add('active');
-    
-    // Switch to search mode view if not already
     if (!document.body.classList.contains('view-mode')) {
-         startSearchAnimation(true);
+         switchView('search', true);
     }
+    activateViewContainer('instructions');
     
     if (instructionsContent) {
         instructionsContent.innerHTML = '<div class="loading" style="text-align:center; padding:20px; color:#888;">Загрузка информации...</div>';
     }
 
-    // Prepare URL
-    let finalPath = resourcePath.replace(/^\/+/, '');
-    
-    // Update URL with Query Param (cleaner than hash)
-    // Extract ID from path (remove extension if present)
+    const finalPath = resourcePath.replace(/^\/+/, '');
     const id = finalPath.replace(/\.json$/, '');
-    const newUrl = `${window.location.pathname}?instruction=${id}`;
-    window.history.pushState({ path: newUrl }, '', newUrl);
+    setHash('#/' + id);
 
-    if (!finalPath.endsWith('.json')) finalPath += '.json';
-    const fullUrl = contentBaseUrl + finalPath;
+    const fullUrl = contentBaseUrl + (finalPath.endsWith('.json') ? finalPath : finalPath + '.json');
 
     fetch(fullUrl)
         .then(res => {
@@ -379,7 +387,6 @@ function openInstruction(resourcePath) {
         })
         .then(data => {
             const contentHtml = parseMarkdown(data.content);
-            
             let headerHtml = '';
             if (data.info) {
                  headerHtml = `<div class="instruction-header" style="margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
@@ -400,10 +407,7 @@ function openInstruction(resourcePath) {
                 }
                 linksHtml += '</div>';
             }
-
-            const backBtnHtml = `<button onclick="closeInstruction()" style="margin-bottom:20px; background:none; border:none; color:#58A6FF; cursor:pointer; font-size:16px;"><i class="fas fa-arrow-left"></i> Назад к поиску</button>`;
-            
-            instructionsContent.innerHTML = backBtnHtml + headerHtml + contentHtml + linksHtml;
+            instructionsContent.innerHTML = headerHtml + contentHtml + linksHtml;
         })
         .catch(err => {
             console.error(err);
@@ -415,17 +419,9 @@ function openInstruction(resourcePath) {
         });
 }
 
-// Global function to close instruction
 window.closeInstruction = function() {
-    const instructionsContainer = document.getElementById('instructionsContainer');
-    const searchResultsContainer = document.getElementById('searchResultsContainer');
-    
-    // Clear Query Param
-    const newUrl = window.location.pathname;
-    window.history.pushState({ path: newUrl }, '', newUrl);
-
-    if (instructionsContainer) instructionsContainer.classList.remove('active');
-    if (searchResultsContainer) searchResultsContainer.classList.add('active');
+    setHash('#/search');
+    activateViewContainer('search');
 };
 
 function initSearchEngine() {
@@ -436,64 +432,68 @@ function initSearchEngine() {
     const toggleTagsBtn = document.getElementById('toggleTagsBtn');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
     const instructionsContainer = document.getElementById('instructionsContainer');
-    const searchResultsContainer = document.getElementById('searchResultsContainer');
 
-    // Listeners for Buttons
     toggleTagsBtn.onclick = () => {
         const tagFilters = document.getElementById('tag-filters');
         if (tagFilters) tagFilters.classList.toggle('active');
     };
     clearSearchBtn.onclick = () => {
         searchInput.value = '';
-        closeInstruction(); // Use global close to handle state/url
-        filterAndRender();
+        selectedTags.clear();
+        updateURLState({ search: null, tags: null });
+        if(updateTagsUI) updateTagsUI();
+        if (instructionsContainer && instructionsContainer.classList.contains('active')) closeInstruction();
+        else filterAndRender();
         searchInput.focus();
     };
 
-    let db = [];
     let selectedTags = new Set();
     let currentFilteredItems = [];
     let itemsToShow = 5;
     const loadMoreStep = 10;
-    let updateTagsUI; 
+    let updateTagsUI;
 
-    // Загрузка БД
     fetch('https://gist.githubusercontent.com/SolvexIT/6c9d9ebc89835f8812cfb66d18268324/raw')
         .then(res => res.json())
         .then(data => {
-            db = data;
-            createTagFilters(db);
+            dbGlobal = data;
+            createTagFilters(dbGlobal);
+            const urlParams = new URLSearchParams(window.location.search);
+            const savedQuery = urlParams.get('search');
+            const savedTags = urlParams.get('tags');
+            if (savedQuery) searchInput.value = savedQuery;
+            if (savedTags) {
+                savedTags.split(',').forEach(t => selectedTags.add(t));
+                if(updateTagsUI) updateTagsUI();
+            }
             filterAndRender(false);
         })
         .catch(err => console.error("DB Error:", err));
 
-    // Debounce
     let timeout;
     searchInput.addEventListener('input', () => {
         clearTimeout(timeout);
-        // При вводе возвращаемся к результатам
-        if (instructionsContainer && instructionsContainer.classList.contains('active')) {
-             closeInstruction();
-        }
-        timeout = setTimeout(filterAndRender, 300);
+        if (instructionsContainer && instructionsContainer.classList.contains('active')) closeInstruction();
+        timeout = setTimeout(() => {
+            filterAndRender();
+            const query = searchInput.value.trim();
+            updateURLState({ search: query || null });
+        }, 300);
     });
 
     function filterAndRender(reset = true) {
         const query = searchInput.value.toLowerCase().trim();
-
-        currentFilteredItems = db.filter(item => {
+        currentFilteredItems = dbGlobal.filter(item => {
             if (selectedTags.size > 0) {
                 const itemTags = item.tags.split(',').map(t => t.trim());
                 if (!Array.from(selectedTags).some(tag => itemTags.includes(tag))) return false;
             }
             if (!query && selectedTags.size === 0) return true;
-
             const inName = item.name.toLowerCase().includes(query);
             const inTags = item.tags.toLowerCase().includes(query);
             const inDesc = item.description ? item.description.toLowerCase().includes(query) : false;
             return inName || inTags || inDesc;
         });
-
         if (reset) itemsToShow = loadMoreStep;
         renderResults();
     }
@@ -508,7 +508,7 @@ function initSearchEngine() {
         currentFilteredItems.slice(0, itemsToShow).forEach(item => {
             const card = document.createElement('div');
             card.className = 'result-card';
-            card.style.cursor = 'pointer'; 
+            card.style.cursor = 'pointer';
 
             const tagsHtml = item.tags.split(',').map(tag => {
                 const trimmedTag = tag.trim();
@@ -526,17 +526,11 @@ function initSearchEngine() {
             `;
             
             card.style.animation = "fadeIn 0.5s ease";
-            
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.tag_container')) return;
-                
-                e.preventDefault(); 
-
-                if (item.link.startsWith('http')) {
-                    window.open(item.link, '_blank');
-                } else {
-                    openInstruction(item.link);
-                }
+                e.preventDefault();
+                if (item.link.startsWith('http')) window.open(item.link, '_blank');
+                else openInstruction(item.link);
             });
 
             resultsArea.appendChild(card);
@@ -547,7 +541,7 @@ function initSearchEngine() {
                     const tag = tagEl.textContent.replace('#', '').trim();
                     if (selectedTags.has(tag)) selectedTags.delete(tag);
                     else selectedTags.add(tag);
-
+                    updateURLState({ tags: Array.from(selectedTags).join(',') || null });
                     if (updateTagsUI) updateTagsUI();
                     filterAndRender();
                 });
@@ -583,6 +577,7 @@ function initSearchEngine() {
 
         clearBtn.onclick = () => {
             selectedTags.clear();
+            updateURLState({ tags: null });
             updateUI();
             filterAndRender();
         };
@@ -595,7 +590,12 @@ function initSearchEngine() {
                 sp.style.display = 'inline-block';
                 sp.style.margin = '2px';
                 sp.innerHTML = `#${tag} <span style="cursor:pointer; margin-left:5px; color:#ff6b6b;">&times;</span>`;
-                sp.querySelector('span').onclick = () => { selectedTags.delete(tag); updateUI(); filterAndRender(); };
+                sp.querySelector('span').onclick = () => { 
+                    selectedTags.delete(tag); 
+                    updateURLState({ tags: Array.from(selectedTags).join(',') || null });
+                    updateUI(); 
+                    filterAndRender(); 
+                };
                 selDiv.appendChild(sp);
             });
 
@@ -610,12 +610,17 @@ function initSearchEngine() {
                 a.href = '#';
                 a.style.display = 'inline-block';
                 a.style.margin = '2px';
-                a.onclick = (e) => { e.preventDefault(); selectedTags.add(tag); updateUI(); filterAndRender(); };
+                a.onclick = (e) => { 
+                    e.preventDefault(); 
+                    selectedTags.add(tag); 
+                    updateURLState({ tags: Array.from(selectedTags).join(',') });
+                    updateUI(); 
+                    filterAndRender(); 
+                };
                 availDiv.appendChild(a);
             });
         }
-        updateTagsUI = updateUI; 
-
+        updateTagsUI = updateUI;
         tagInput.addEventListener('input', updateUI);
         updateUI();
     }
@@ -634,29 +639,41 @@ function initSearchEngine() {
         `;
         document.head.appendChild(s);
     }
-
     searchInitialized = true;
 }
 
-/* --- MUSIC PLAYER LOGIC MOVED TO JS/music-player.js --- */
-
-
-// --- INITIALIZATION ---
+// --- INITIALIZATION & ROUTING ---
 window.addEventListener('load', () => {
-    // Check for query param first
-    const urlParams = new URLSearchParams(window.location.search);
-    const instructionId = urlParams.get('instruction');
-
-    if (instructionId) {
-        // Direct open instruction
-        startSearchAnimation(true);
-        setTimeout(() => openInstruction(instructionId), 100); // Small delay to ensure containers are ready
-    } else if (window.location.hash === '#search') {
-        startSearchAnimation(true);
-    } else {
-        // Prepare items but don't open automatically
-        renderItems(menuConfig);
-        isMenuOpen = false;
-        orbitMenu.classList.remove('active');
-    }
+    handleRouting();
+    window.addEventListener('hashchange', handleRouting);
+    window.addEventListener('popstate', handleRouting);
 });
+
+function handleRouting() {
+    // If update was triggered internally, ignore external event handling
+    if (isInternalRouteUpdate) return;
+
+    const hash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasSearch = urlParams.get('search') || urlParams.get('tags');
+
+    if (hash === '#/search') {
+        startSearchAnimation(true);
+    } else if (hash.startsWith('#/') && hash.length > 2) {
+        const path = hash.substring(2);
+        if (!document.body.classList.contains('view-mode')) {
+            startSearchAnimation(true);
+        }
+        openInstruction(path);
+    } else if (hasSearch && !hash) {
+        setHash('#/search');
+    } else if (!hash) {
+        if (document.body.classList.contains('view-mode')) {
+            returnToMenu();
+        } else {
+             renderItems(menuConfig);
+             isMenuOpen = false;
+             orbitMenu.classList.remove('active');
+        }
+    }
+}
