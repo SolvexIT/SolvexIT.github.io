@@ -46,6 +46,10 @@ let historyStack = [];
 let isTransitioning = false;
 let isInternalRouteUpdate = false; 
 
+// Timeouts for view transitions
+let hideSearchTimeout = null;
+let hideInstructionsTimeout = null;
+
 // --- ФАКТЫ И РОТАЦИЯ ---
 const FACT_URL = 'https://gist.githubusercontent.com/SolvexIT/98cac512e240657220e5fde866a392ad/raw';
 let factInterval;
@@ -224,24 +228,27 @@ function activateViewContainer(viewName) {
     const instructionsContainer = document.getElementById('instructionsContainer');
     
     if (viewName === 'search') {
-        // Remove padding for back button
-        headerContent.classList.remove('has-back-btn');
-
+        // Hide instructions smoothly
         if (instructionsContainer) {
+            if (hideInstructionsTimeout) clearTimeout(hideInstructionsTimeout);
             instructionsContainer.classList.remove('active');
-            setTimeout(() => { instructionsContainer.style.display = 'none'; }, 500);
+            hideInstructionsTimeout = setTimeout(() => { instructionsContainer.style.display = 'none'; }, 500);
         }
 
         initSearchEngine();
         
         // RE-RENDER CONTENT: If returning to search, make sure content is visible
         if (globalFilterAndRender) {
-            globalFilterAndRender(false); // Do not reset itemsToShow if possible, or true if we want reset
+            globalFilterAndRender(false);
         }
 
+        // Remove padding for back button
+        headerContent.classList.remove('has-back-btn');
+
         if (searchResultsContainer) {
+            if (hideSearchTimeout) clearTimeout(hideSearchTimeout);
             searchResultsContainer.style.display = 'flex';
-            void searchResultsContainer.offsetWidth; 
+            void searchResultsContainer.offsetWidth; // Reflow
             searchResultsContainer.classList.add('active');
         }
         
@@ -258,17 +265,20 @@ function activateViewContainer(viewName) {
         if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
         
     } else if (viewName === 'instructions') {
+        // Hide Search Results smoothly
+        if (searchResultsContainer) {
+            if (hideSearchTimeout) clearTimeout(hideSearchTimeout);
+            searchResultsContainer.classList.remove('active');
+            hideSearchTimeout = setTimeout(() => { searchResultsContainer.style.display = 'none'; }, 500);
+        }
+
         // Add padding for back button
         headerContent.classList.add('has-back-btn');
 
-        if (searchResultsContainer) {
-            searchResultsContainer.classList.remove('active');
-            setTimeout(() => { searchResultsContainer.style.display = 'none'; }, 500);
-        }
-
         if (instructionsContainer) {
+            if (hideInstructionsTimeout) clearTimeout(hideInstructionsTimeout);
             instructionsContainer.style.display = 'flex';
-            void instructionsContainer.offsetWidth; 
+            void instructionsContainer.offsetWidth; // Reflow
             instructionsContainer.classList.add('active');
         }
         
@@ -326,7 +336,7 @@ function returnToMenu() {
     stopFactRotation();
     document.body.classList.remove('view-mode');
     document.body.classList.remove('search-mode');
-    headerContent.classList.remove('has-back-btn'); // Remove padding
+    headerContent.classList.remove('has-back-btn');
 
     const input = document.getElementById('searchInput');
     if(input) input.blur();
@@ -337,12 +347,14 @@ function returnToMenu() {
     const searchResultsContainer = document.getElementById('searchResultsContainer');
     const instructionsContainer = document.getElementById('instructionsContainer');
     if (searchResultsContainer) {
+        if (hideSearchTimeout) clearTimeout(hideSearchTimeout);
         searchResultsContainer.classList.remove('active');
-        setTimeout(() => { searchResultsContainer.style.display = 'none'; }, 500);
+        hideSearchTimeout = setTimeout(() => { searchResultsContainer.style.display = 'none'; }, 500);
     }
     if (instructionsContainer) {
+        if (hideInstructionsTimeout) clearTimeout(hideInstructionsTimeout);
         instructionsContainer.classList.remove('active');
-        setTimeout(() => { instructionsContainer.style.display = 'none'; }, 500);
+        hideInstructionsTimeout = setTimeout(() => { instructionsContainer.style.display = 'none'; }, 500);
     }
     
     if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
@@ -419,7 +431,6 @@ function parseMarkdown(lines) {
 function openInstruction(resourcePath) {
     const instructionsContent = document.getElementById('instructionsContent');
     
-    // Clear search state COMPLETELY
     const clearBtn = document.getElementById('clearSearchBtn');
     if (clearBtn) clearBtn.click();
 
@@ -559,8 +570,6 @@ function initSearchEngine() {
         if (reset) itemsToShow = loadMoreStep;
         renderResults();
     }
-    
-    globalFilterAndRender = filterAndRender;
 
     function renderResults() {
         resultsArea.innerHTML = '';
@@ -603,7 +612,7 @@ function initSearchEngine() {
                 tagEl.addEventListener('click', (e) => {
                     e.stopPropagation(); 
                     const tag = tagEl.textContent.replace('#', '').trim();
-                    if (selectedTags.has(tag)) selectedTags.delete(tag); 
+                    if (selectedTags.has(tag)) selectedTags.delete(tag);
                     else selectedTags.add(tag);
                     updateURLState({ tags: Array.from(selectedTags).join(',') || null });
                     if (updateTagsUI) updateTagsUI();
