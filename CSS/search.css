@@ -16,7 +16,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* overflow-y: auto; Removed - handled by search-mode class */
+    overflow-x: hidden; /* Prevent body horizontal scroll */
 }
 
 /* --- СТРАНИЦА ПОИСКА --- */
@@ -33,7 +33,7 @@ body {
 .search-header { 
     display: flex;
     align-items: center;
-    justify-content: space-between; /* Распределяем пространство */
+    justify-content: space-between; 
     margin-bottom: 40px;
     position: relative;
 }
@@ -49,7 +49,7 @@ body {
     font-size: 16px;
     padding: 10px 20px;
     border-radius: 30px;
-    background: rgba(255, 255, 255, 0.05); /* Полупрозрачный фон */
+    background: rgba(255, 255, 255, 0.05); 
     transition: all 0.3s var(--anim-curve);
     border: 1px solid transparent;
 }
@@ -59,7 +59,6 @@ body {
     transition: transform 0.3s ease;
 }
 
-/* Ховер: Подсветка и движение стрелки */
 .back-nav-btn:hover {
     color: white;
     background: rgba(255, 255, 255, 0.1);
@@ -67,19 +66,17 @@ body {
 }
 
 .back-nav-btn:hover .arrow {
-    transform: translateX(-5px); /* Стрелка едет влево */
+    transform: translateX(-5px);
 }
 
-/* --- АНИМАЦИЯ СВАЙПА ПРИ НАЖАТИИ --- */
 .back-nav-btn.swipe-out {
-    transform: translateX(-50px); /* Улетает влево */
-    opacity: 0; /* И исчезает */
+    transform: translateX(-50px);
+    opacity: 0; 
     pointer-events: none;
 }
 
 /* --- Логотип --- */
 .logo-wrapper {
-    /* Абсолютное центрирование логотипа, чтобы кнопка слева его не сдвигала */
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
@@ -138,12 +135,10 @@ body {
 
 .available-tags {
     margin-bottom: 10px;
-    /* Custom Scrollbar */
     scrollbar-width: thin;
     scrollbar-color: var(--accent) #1e1e1e;
 }
 
-/* Chrome/Safari/Edge Scrollbar */
 .available-tags::-webkit-scrollbar {
     width: 6px;
 }
@@ -196,6 +191,7 @@ body {
     flex-direction: column;
     gap: 15px;
     text-align: left;
+    max-width: 100%; /* Safety */
 }
 
 .result-card {
@@ -206,7 +202,8 @@ body {
     transition: 0.2s;
     border: 1px solid transparent;
     display: block;
-    animation: fadeIn 0.5s ease; /* Плавное появление списка */
+    animation: fadeIn 0.5s ease;
+    word-wrap: break-word; /* Prevent long links from breaking layout */
 }
 
 @keyframes fadeIn {
@@ -265,9 +262,9 @@ body {
     padding: 5px 12px;
     margin: 4px 4px 0 0;
     text-decoration: none;
-    background: rgba(0, 145, 217, 0.15); /* Low opacity accent */
+    background: rgba(0, 145, 217, 0.15); 
     border: 1px solid rgba(0, 145, 217, 0.3);
-    border-radius: 20px; /* Pill shape */
+    border-radius: 20px; 
     color: #58A6FF;
     display: inline-block;
     font-size: 0.85rem;
@@ -286,7 +283,7 @@ body {
 /* --- КНОПКА "ПОКАЗАТЬ ЕЩЁ" --- */
 .load-more-btn {
     display: block;
-    margin: 30px auto; /* Центрируем */
+    margin: 30px auto; 
     padding: 12px 40px;
     font-size: 16px;
     font-family: inherit;
@@ -300,7 +297,7 @@ body {
 
 .load-more-btn:hover {
     color: white;
-    background: var(--accent); /* Синий цвет */
+    background: var(--accent); 
     border-color: var(--accent);
     box-shadow: 0 0 20px rgba(0, 136, 204, 0.4);
     transform: translateY(-2px);
@@ -308,4 +305,134 @@ body {
 
 .load-more-btn:active {
     transform: scale(0.95);
+}
+
+/* --- АДАПТАЦИЯ ИНСТРУКЦИЙ (ФИКС) --- */
+#instructionsContainer {
+    width: 100%;
+    max-width: 800px; /* Limit width on desktop */
+    overflow-wrap: break-word; /* Break long words */
+    word-wrap: break-word; /* Legacy support */
+    hyphens: auto; /* Hyphenation */
+}
+
+#instructionsContent {
+    width: 100%;
+    /* Ensure content doesn't overflow parent */
+    max-width: 100%; 
+}
+
+#instructionsContainer h1, 
+#instructionsContainer h2, 
+#instructionsContainer h3 {
+    color: #e0e0e0;
+    max-width: 100%;
+}
+
+#instructionsContainer h1 { font-size: 2rem; line-height: 1.2; }
+#instructionsContainer h2 { font-size: 1.5rem; margin-top: 1.5em; margin-bottom: 0.5em; }
+#instructionsContainer h3 { font-size: 1.2rem; margin-top: 1.2em; }
+
+#instructionsContainer p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1em;
+    color: #ccc;
+    max-width: 100%;
+}
+
+#instructionsContainer img {
+    max-width: 100%; /* Strict image containment */
+    height: auto;
+    border-radius: 8px;
+    margin: 10px 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: block; /* Fix inline image spacing */
+}
+
+/* Code Blocks - Scrollable */
+#instructionsContainer pre {
+    background: #111;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border: 1px solid #333;
+    
+    /* Critical for mobile */
+    overflow-x: auto; 
+    white-space: pre; /* Keep code formatting but allow scroll */
+    max-width: 100%;
+}
+
+#instructionsContainer code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: #ff9f43;
+}
+
+/* Blockquotes */
+#instructionsContainer blockquote {
+    border-left: 4px solid var(--accent);
+    background: rgba(0, 145, 217, 0.1);
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    max-width: 100%;
+}
+
+/* Links inside instructions */
+#instructionsContainer a {
+    word-break: break-all; /* Break long links */
+}
+
+/* Mobile Specific Tweaks */
+@media (max-width: 768px) {
+    .search-results-wrapper {
+        padding: 15px 10px; /* Reduce side padding */
+        width: 100vw; /* Full viewport width */
+        overflow-x: hidden; /* Force hide overflow */
+    }
+    
+    #instructionsContainer {
+        padding: 0 5px; /* Tiny internal padding */
+    }
+
+    /* Instruction Header on Mobile */
+    .instruction-header {
+        text-align: left;
+        padding-right: 0;
+    }
+
+    .instruction-header h1 {
+        font-size: 1.6rem;
+        word-break: break-word; /* Ensure title breaks */
+    }
+
+    .instruction-header .meta-info {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        align-items: flex-start;
+    }
+
+    .meta-info span {
+        margin-right: 0 !important;
+        font-size: 0.85rem;
+    }
+
+    /* Adjust Card Styles */
+    .result-card {
+        padding: 15px;
+    }
+
+    .result-title {
+        font-size: 18px;
+    }
+
+    /* Code blocks adjustments */
+    #instructionsContainer pre {
+        padding: 10px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+    }
 }
