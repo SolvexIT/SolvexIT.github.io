@@ -80,6 +80,23 @@ body::before {
     100% { transform: translate(50px, 30px) scale(1.1) rotate(5deg); }
 }
 
+/* --- TEXT ANIMATIONS --- */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-text {
+    animation: fadeInUp 0.5s ease-out forwards;
+    opacity: 0; /* Initially hidden */
+}
+
 .logo-style {
     width: var(--logo-size);
     height: var(--logo-size);

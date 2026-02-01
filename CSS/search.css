@@ -466,10 +466,10 @@ body {
 }
 
 .instruction-title {
-    color: var(--accent);
+    color: #58A6FF;
     margin-bottom: 15px;
     font-size: 2em;
-    text-shadow: 0 0 10px rgba(0, 145, 217, 0.2);
+    text-shadow: 0 0 10px rgba(88, 166, 255, 0.2);
     line-height: 1.2;
 }
 

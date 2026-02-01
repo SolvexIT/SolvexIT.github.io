@@ -9,8 +9,8 @@ window.renderInstructionContent = function(data, targetElementId) {
     
     let headerHtml = '';
     if (data.info) {
-            headerHtml = `<div class="instruction-header">
-            <h1 class="instruction-title">${data.info.title}</h1>
+            headerHtml = `<div class="instruction-header animate-text">
+            <h1 class="instruction-title" style="color: #58A6FF;">${data.info.title}</h1>
             <div class="meta-info-container">
                 <span class="meta-badge">
                     <i class="fas fa-user meta-icon-user"></i> ${data.info.author}
@@ -80,7 +80,7 @@ function parseMarkdown(lines) {
                 // Start of block
                 codeLang = line.trim().substring(3).trim();
                 const langLabel = codeLang ? `<span class="code-lang">${codeLang}</span>` : '';
-                html += `<div class="code-block-wrapper">
+                html += `<div class="code-block-wrapper animate-text">
                             <div class="code-header">
                                 ${langLabel}
                                 <button class="copy-code-btn" onclick="copyCode(this)">
@@ -106,15 +106,15 @@ function parseMarkdown(lines) {
             .replace(/>/g, "&gt;");
 
         // Headers
-        if (processedLine.startsWith('### ')) processedLine = `<h3>${processedLine.substring(4)}</h3>`;
-        else if (processedLine.startsWith('## ')) processedLine = `<h2>${processedLine.substring(3)}</h2>`;
-        else if (processedLine.startsWith('# ')) processedLine = `<h1>${processedLine.substring(2)}</h1>`;
+        if (processedLine.startsWith('### ')) processedLine = `<h3 class="animate-text" style="color: #58A6FF;">${processedLine.substring(4)}</h3>`;
+        else if (processedLine.startsWith('## ')) processedLine = `<h2 class="animate-text" style="color: #58A6FF;">${processedLine.substring(3)}</h2>`;
+        else if (processedLine.startsWith('# ')) processedLine = `<h1 class="animate-text" style="color: #58A6FF;">${processedLine.substring(2)}</h1>`;
         
         // Bold
         processedLine = processedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         
         // Quotes
-        if (processedLine.startsWith('&gt; ')) processedLine = `<blockquote>${processedLine.substring(5)}</blockquote>`;
+        if (processedLine.startsWith('&gt; ')) processedLine = `<blockquote class="animate-text">${processedLine.substring(5)}</blockquote>`;
 
         // Buttons: button{`type`_`label`_`url`}
         processedLine = processedLine.replace(/button\{`(.*?)`_`(.*?)`_`(.*?)`\}/g, (match, type, label, url) => {
@@ -124,14 +124,14 @@ function parseMarkdown(lines) {
             // Re-decode URL if it was escaped (though usually it's fine)
             const cleanUrl = url.replace(/&amp;/g, '&');
 
-            return `<a href="${cleanUrl}" target="_blank" class="download-btn" style="display:inline-block; padding:10px 20px; background:${bgColor}; color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconClass}"></i> ${label}</a>`;
+            return `<a href="${cleanUrl}" target="_blank" class="download-btn animate-text" style="display:inline-block; padding:10px 20px; background:${bgColor}; color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconClass}"></i> ${label}</a>`;
         });
 
         // Paragraphs
         if (line.trim() === '') {
             html += '<br>';
         } else if (!processedLine.startsWith('<')) {
-            html += `<p>${processedLine}</p>`;
+            html += `<p class="animate-text">${processedLine}</p>`;
         } else {
             html += processedLine;
         }
