@@ -224,6 +224,9 @@ function activateViewContainer(viewName) {
     const instructionsContainer = document.getElementById('instructionsContainer');
     
     if (viewName === 'search') {
+        // Remove padding for back button
+        headerContent.classList.remove('has-back-btn');
+
         if (instructionsContainer) {
             instructionsContainer.classList.remove('active');
             setTimeout(() => { instructionsContainer.style.display = 'none'; }, 500);
@@ -233,7 +236,7 @@ function activateViewContainer(viewName) {
         
         // RE-RENDER CONTENT: If returning to search, make sure content is visible
         if (globalFilterAndRender) {
-            globalFilterAndRender();
+            globalFilterAndRender(false); // Do not reset itemsToShow if possible, or true if we want reset
         }
 
         if (searchResultsContainer) {
@@ -255,6 +258,9 @@ function activateViewContainer(viewName) {
         if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
         
     } else if (viewName === 'instructions') {
+        // Add padding for back button
+        headerContent.classList.add('has-back-btn');
+
         if (searchResultsContainer) {
             searchResultsContainer.classList.remove('active');
             setTimeout(() => { searchResultsContainer.style.display = 'none'; }, 500);
@@ -266,6 +272,7 @@ function activateViewContainer(viewName) {
             instructionsContainer.classList.add('active');
         }
         
+        // Hide Search UI completely
         if(headerSearch) headerSearch.style.display = 'none';
         const resultsArea = document.getElementById('results-area');
         if (resultsArea) resultsArea.innerHTML = ''; 
@@ -319,6 +326,7 @@ function returnToMenu() {
     stopFactRotation();
     document.body.classList.remove('view-mode');
     document.body.classList.remove('search-mode');
+    headerContent.classList.remove('has-back-btn'); // Remove padding
 
     const input = document.getElementById('searchInput');
     if(input) input.blur();
@@ -411,6 +419,7 @@ function parseMarkdown(lines) {
 function openInstruction(resourcePath) {
     const instructionsContent = document.getElementById('instructionsContent');
     
+    // Clear search state COMPLETELY
     const clearBtn = document.getElementById('clearSearchBtn');
     if (clearBtn) clearBtn.click();
 
@@ -551,7 +560,6 @@ function initSearchEngine() {
         renderResults();
     }
     
-    // Assign global reference
     globalFilterAndRender = filterAndRender;
 
     function renderResults() {
@@ -595,7 +603,7 @@ function initSearchEngine() {
                 tagEl.addEventListener('click', (e) => {
                     e.stopPropagation(); 
                     const tag = tagEl.textContent.replace('#', '').trim();
-                    if (selectedTags.has(tag)) selectedTags.delete(tag);
+                    if (selectedTags.has(tag)) selectedTags.delete(tag); 
                     else selectedTags.add(tag);
                     updateURLState({ tags: Array.from(selectedTags).join(',') || null });
                     if (updateTagsUI) updateTagsUI();

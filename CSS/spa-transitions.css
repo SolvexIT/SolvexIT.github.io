@@ -32,6 +32,12 @@
     padding-right: 20px;
     z-index: 95;
     pointer-events: none; 
+    transition: padding-left 0.3s ease; /* Smooth transition for padding change */
+}
+
+/* Added padding when back button is present */
+.header-content.has-back-btn {
+    padding-left: 140px; /* Increased from 80px to accommodate back button */
 }
 
 /* Random Fact (Desktop Style) */
@@ -233,6 +239,10 @@ body.search-mode, body.view-mode {
         padding-right: 10px;
         justify-content: flex-end;
     }
+    
+    .header-content.has-back-btn {
+        padding-left: 100px; /* Adjusted for mobile */
+    }
 
     /* Mobile Notification (Compact & Transparent) */
     .random-fact {
@@ -285,4 +295,3 @@ body.search-mode, body.view-mode {
 }
 
 /* Music player styles removed from here to avoid conflicts with style.css */
-
