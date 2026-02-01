@@ -522,9 +522,10 @@ function initSearchEngine() {
             const inDesc = item.description ? item.description.toLowerCase().includes(query) : false;
             return inName || inTags || inDesc;
         });
-        if (reset) itemsToShow = loadMoreStep;
+        if (reset) itemsToShow = 5;
         renderResults();
     }
+    globalFilterAndRender = filterAndRender;
 
     function renderResults() {
         resultsArea.innerHTML = '';
