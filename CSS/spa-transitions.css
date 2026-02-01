@@ -58,6 +58,10 @@
     /* Removed ellipsis to allow marquee if we want */
     /* text-overflow: ellipsis; */ 
     position: relative;
+    
+    /* Fade edges for smoother scrolling/appearance */
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
 
 /* Desktop Marquee for long text */
@@ -267,6 +271,10 @@ body.search-mode, body.view-mode {
         font-size: 0.8rem;
         color: rgba(255, 255, 255, 0.8);
         text-shadow: none;
+
+        /* Fade edges for smoother scrolling/appearance */
+        mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
     }
 
     .random-fact span {
