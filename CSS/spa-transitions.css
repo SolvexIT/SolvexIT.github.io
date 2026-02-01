@@ -287,6 +287,12 @@ body.search-mode, body.view-mode {
     .logo-phase-3 {
         left: 30px !important; 
     }
+
+    /* Prevent content overlap with fixed notification */
+    .search-results-wrapper {
+        top: 135px;
+        min-height: calc(100vh - 135px);
+    }
 }
 
 @keyframes marquee {
