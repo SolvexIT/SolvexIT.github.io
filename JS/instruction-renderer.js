@@ -9,12 +9,18 @@ window.renderInstructionContent = function(data, targetElementId) {
     
     let headerHtml = '';
     if (data.info) {
-            headerHtml = `<div class="instruction-header" style="margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
-            <h1 style="color:#58A6FF;">${data.info.title}</h1>
-            <div class="meta-info" style="color:#888; font-size:0.9em; margin-top:5px;">
-                <span style="margin-right:15px;"><i class="fas fa-user"></i> ${data.info.author}</span>
-                <span style="margin-right:15px;"><i class="fas fa-code-branch"></i> v${data.info.version}</span>
-                <span><i class="far fa-calendar-alt"></i> ${data.info.last_updated}</span>
+            headerHtml = `<div class="instruction-header">
+            <h1 class="instruction-title">${data.info.title}</h1>
+            <div class="meta-info-container">
+                <span class="meta-badge">
+                    <i class="fas fa-user meta-icon-user"></i> ${data.info.author}
+                </span>
+                <span class="meta-badge">
+                    <i class="fas fa-code-branch meta-icon-version"></i> v${data.info.version}
+                </span>
+                <span class="meta-badge">
+                    <i class="far fa-calendar-alt meta-icon-date"></i> ${data.info.last_updated}
+                </span>
             </div>
             </div>`;
     }
@@ -22,11 +28,34 @@ window.renderInstructionContent = function(data, targetElementId) {
     targetElement.innerHTML = headerHtml + contentHtml;
 };
 
+// Global Copy Function
+window.copyCode = function(btn) {
+    // Find the code block within the same wrapper
+    const wrapper = btn.closest('.code-block-wrapper');
+    const codeBlock = wrapper.querySelector('code');
+    const text = codeBlock.innerText;
+
+    navigator.clipboard.writeText(text).then(() => {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Скопировано';
+        btn.classList.add('copied');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('copied');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        btn.innerHTML = '<i class="fas fa-times"></i> Ошибка';
+    });
+};
+
 // Simple Markdown Parser
 function parseMarkdown(lines) {
     if (!Array.isArray(lines)) return '';
     let html = '';
     let inCodeBlock = false;
+    let codeLang = '';
 
     const iconMap = {
         'download': 'fas fa-download',
@@ -47,7 +76,22 @@ function parseMarkdown(lines) {
         // Code blocks
         if (line.trim().startsWith('```')) {
             inCodeBlock = !inCodeBlock;
-            html += inCodeBlock ? '<pre><code>' : '</code></pre>';
+            if (inCodeBlock) {
+                // Start of block
+                codeLang = line.trim().substring(3).trim();
+                const langLabel = codeLang ? `<span class="code-lang">${codeLang}</span>` : '';
+                html += `<div class="code-block-wrapper">
+                            <div class="code-header">
+                                ${langLabel}
+                                <button class="copy-code-btn" onclick="copyCode(this)">
+                                    <i class="fas fa-copy"></i> Копировать
+                                </button>
+                            </div>
+                            <pre><code>`;
+            } else {
+                // End of block
+                html += '</code></pre></div>';
+            }
             return;
         }
         if (inCodeBlock) {

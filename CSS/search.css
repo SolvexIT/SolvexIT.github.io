@@ -310,7 +310,7 @@ body {
 /* --- АДАПТАЦИЯ ИНСТРУКЦИЙ (ФИКС) --- */
 #instructionsContainer {
     width: 100%;
-    max-width: 800px; /* Limit width on desktop */
+    max-width: 100%; /* Full width */
     overflow-wrap: break-word; /* Break long words */
     word-wrap: break-word; /* Legacy support */
     hyphens: auto; /* Hyphenation */
@@ -384,6 +384,126 @@ body {
 #instructionsContainer a {
     word-break: break-all; /* Break long links */
 }
+
+/* --- CODE BLOCKS UI --- */
+.code-block-wrapper {
+    position: relative;
+    margin: 20px 0;
+    border-radius: 8px;
+    background: #111;
+    border: 1px solid #333;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1a1a1a;
+    padding: 8px 15px;
+    border-bottom: 1px solid #333;
+}
+
+.code-lang {
+    color: #888;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.copy-code-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.copy-code-btn:hover {
+    background: #333;
+    color: white;
+    border-color: #666;
+}
+
+.copy-code-btn.copied {
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+/* Override default pre style inside wrapper */
+.code-block-wrapper pre {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+/* --- INSTRUCTION HEADER STYLES --- */
+.instruction-header {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    text-align: center;
+    position: relative;
+}
+
+/* Full width line after header */
+.instruction-header::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%; /* Matches container width */
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15); 
+    pointer-events: none;
+    z-index: 10;
+}
+
+.instruction-title {
+    color: var(--accent);
+    margin-bottom: 15px;
+    font-size: 2em;
+    text-shadow: 0 0 10px rgba(0, 145, 217, 0.2);
+    line-height: 1.2;
+}
+
+.meta-info-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.9em;
+    color: #ccc;
+}
+
+.meta-badge {
+    background: rgba(255, 255, 255, 0.06);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.meta-badge:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.meta-icon-user { color: #58A6FF; }
+.meta-icon-version { color: #238636; }
+.meta-icon-date { color: #d29922; }
 
 /* Mobile Specific Tweaks */
 @media (max-width: 768px) {

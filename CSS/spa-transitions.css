@@ -275,6 +275,10 @@ body.search-mode, body.view-mode {
         /* Fade edges for smoother scrolling/appearance */
         mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
         -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+
+        /* Blurring the background */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
     }
 
     .random-fact span {
