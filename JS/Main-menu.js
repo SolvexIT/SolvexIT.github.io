@@ -398,35 +398,7 @@ function updateURLState(params) {
     window.history.replaceState({}, '', url);
 }
 
-function parseMarkdown(lines) {
-    if (!Array.isArray(lines)) return '';
-    let html = '';
-    let inCodeBlock = false;
-
-    lines.forEach(line => {
-        if (line.trim().startsWith('```')) {
-            inCodeBlock = !inCodeBlock;
-            html += inCodeBlock ? '<pre><code>' : '</code></pre>';
-            return;
-        }
-        if (inCodeBlock) {
-            html += line + '\n';
-            return;
-        }
-
-        let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        if (processedLine.startsWith('### ')) processedLine = `<h3>${processedLine.substring(4)}</h3>`;
-        else if (processedLine.startsWith('## ')) processedLine = `<h2>${processedLine.substring(3)}</h2>`;
-        else if (processedLine.startsWith('# ')) processedLine = `<h1>${processedLine.substring(2)}</h1>`;
-        processedLine = processedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        if (processedLine.startsWith('&gt; ')) processedLine = `<blockquote>${processedLine.substring(5)}</blockquote>`;
-
-        if (line.trim() === '') html += '<br>';
-        else if (!processedLine.startsWith('<')) html += `<p>${processedLine}</p>`;
-        else html += processedLine;
-    });
-    return html;
-}
+// NOTE: parseMarkdown removed from here, now in JS/instruction-renderer.js
 
 function openInstruction(resourcePath) {
     const instructionsContent = document.getElementById('instructionsContent');
@@ -459,28 +431,11 @@ function openInstruction(resourcePath) {
             return res.json();
         })
         .then(data => {
-            const contentHtml = parseMarkdown(data.content);
-            let headerHtml = '';
-            if (data.info) {
-                 headerHtml = `<div class="instruction-header" style="margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
-                    <h1 style="color:#58A6FF;">${data.info.title}</h1>
-                    <div class="meta-info" style="color:#888; font-size:0.9em; margin-top:5px;">
-                        <span style="margin-right:15px;"><i class="fas fa-user"></i> ${data.info.author}</span>
-                        <span style="margin-right:15px;"><i class="fas fa-code-branch"></i> v${data.info.version}</span>
-                        <span><i class="far fa-calendar-alt"></i> ${data.info.last_updated}</span>
-                    </div>
-                 </div>`;
+            if (window.renderInstructionContent) {
+                window.renderInstructionContent(data, 'instructionsContent');
+            } else {
+                throw new Error("Renderer not found");
             }
-
-            let linksHtml = '';
-            if (data.links) {
-                linksHtml = '<div class="instruction-links" style="margin-top:20px; padding-top:10px; border-top:1px solid #333;">';
-                for (const [key, url] of Object.entries(data.links)) {
-                    linksHtml += `<a href="${url}" target="_blank" class="download-btn" style="display:inline-block; padding:10px 20px; background:#238636; color:white; text-decoration:none; border-radius:6px; margin-right:10px;"><i class="fas fa-download"></i> ${key}</a> `;
-                }
-                linksHtml += '</div>';
-            }
-            instructionsContent.innerHTML = headerHtml + contentHtml + linksHtml;
         })
         .catch(err => {
             console.error(err);
