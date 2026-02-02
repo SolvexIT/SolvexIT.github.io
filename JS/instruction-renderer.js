@@ -103,6 +103,13 @@ function parseMarkdown(lines) {
     };
 
     lines.forEach((line) => {
+        // 0. CALCULATE INDENTATION (4 spaces = 1 level)
+        // We do this before trimming to capture the visual hierarchy
+        const leadingSpaces = line.match(/^ */)[0].length;
+        const indentLevel = Math.floor(leadingSpaces / 4);
+        const indentPx = indentLevel * 25; // 25px per level
+        const indentStyle = indentLevel > 0 ? `margin-left: ${indentPx}px;` : '';
+
         const trimmedLine = line.trim();
 
         // 1. LISTS
@@ -128,7 +135,8 @@ function parseMarkdown(lines) {
             }
 
             const content = trimmedLine.substring(isUl ? 2 : trimmedLine.indexOf(' ') + 1);
-            html += `<li style="margin-bottom: 5px;">${processInlineMarkdown(content)}</li>
+            // Apply indentation specifically to the list item
+            html += `<li style="margin-bottom: 5px; ${indentStyle}">${processInlineMarkdown(content)}</li>
 `;
             return;
         } else if (inList) {
@@ -141,8 +149,9 @@ function parseMarkdown(lines) {
         if (trimmedLine.startsWith('```')) {
             inCodeBlock = !inCodeBlock;
             if (inCodeBlock) {
+                // Apply indentation to the wrapper of the code block too if needed
                 codeLang = line.trim().substring(3).trim();
-                html += `<div class="code-block-wrapper animate-text wait-animation">
+                html += `<div class="code-block-wrapper animate-text wait-animation" style="${indentStyle}">
                             <div class="code-header">
                                 ${codeLang ? `<span class="code-lang">${codeLang}</span>` : ''}
                                 <button class="copy-code-btn" onclick="copyCode(this)"><i class="fas fa-copy"></i> Копировать</button>
@@ -160,7 +169,7 @@ function parseMarkdown(lines) {
 
         // 3. HORIZONTAL RULE
         if (trimmedLine === '---' || trimmedLine === '***') {
-            html += '<hr class="animate-text wait-animation" style="border: 0; border-top: 1px solid #333; margin: 20px 0;">';
+            html += `<hr class="animate-text wait-animation" style="border: 0; border-top: 1px solid #333; margin: 20px 0; ${indentStyle}">`;
             return;
         }
 
@@ -168,13 +177,13 @@ function parseMarkdown(lines) {
         let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
         // Headers
-        if (processedLine.startsWith('### ')) processedLine = `<h3 class="animate-text wait-animation" style="color: #58A6FF;">${processedLine.substring(4)}</h3>`;
-        else if (processedLine.startsWith('## ')) processedLine = `<h2 class="animate-text wait-animation" style="color: #58A6FF;">${processedLine.substring(3)}</h2>`;
-        else if (processedLine.startsWith('# ')) processedLine = `<h1 class="animate-text wait-animation" style="color: #58A6FF;">${processedLine.substring(2)}</h1>`;
+        if (processedLine.startsWith('### ')) processedLine = `<h3 class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${processedLine.substring(4)}</h3>`;
+        else if (processedLine.startsWith('## ')) processedLine = `<h2 class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${processedLine.substring(3)}</h2>`;
+        else if (processedLine.startsWith('# ')) processedLine = `<h1 class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${processedLine.substring(2)}</h1>`;
         
         // Quotes
         if (processedLine.startsWith('&gt; ')) {
-            processedLine = `<blockquote class="animate-text wait-animation">${processedLine.substring(5)}</blockquote>`;
+            processedLine = `<blockquote class="animate-text wait-animation" style="${indentStyle}">${processedLine.substring(5)}</blockquote>`;
         }
 
         // TEMPORARY PLACEHOLDERS for buttons/images to avoid double-processing
@@ -189,7 +198,7 @@ function parseMarkdown(lines) {
             processedLine = processedLine.replace(/>(.*?)<\//, (m, inner) => `>${processInlineMarkdown(inner)}</`); // Corrected regex escape
         } else if (!processedLine.startsWith('<')) {
             processedLine = processInlineMarkdown(processedLine);
-            processedLine = (trimmedLine === '') ? '<br>' : `<p class="animate-text wait-animation">${processedLine}</p>`;
+            processedLine = (trimmedLine === '') ? '<br>' : `<p class="animate-text wait-animation" style="${indentStyle}">${processedLine}</p>`;
         }
 
         // RESTORE placeholders with full parsing
