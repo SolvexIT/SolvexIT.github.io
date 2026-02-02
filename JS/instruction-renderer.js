@@ -295,13 +295,16 @@ function processInlineMarkdown(text) {
     // 1. Bold: **text**
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     
-    // 2. Strikethrough: ~~text~~
+    // 2. Underline: __text__
+    text = text.replace(/__(.*?)__/g, '<u>$1</u>');
+    
+    // 3. Strikethrough: ~~text~~
     text = text.replace(/~~(.*?)~~/g, '<del>$1</del>');
     
-    // 3. Italic: *text* (Using only stars to avoid conflict with underscores in buttons)
+    // 4. Italic: *text* (Using only stars to avoid conflict with underscores in buttons)
     text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
     
-    // 4. Links: [Text](url)
+    // 5. Links: [Text](url)
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, txt, url) => {
         return `<a href="${url}" target="_blank" style="color: #58A6FF; text-decoration: underline;">${txt}</a>`;
     });
