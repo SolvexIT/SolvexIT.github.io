@@ -107,7 +107,7 @@ function parseMarkdown(lines) {
 
         // 1. LISTS
         const isUl = trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ');
-        const isOl = /^\\d+\\.\s/.test(trimmedLine); // Corrected regex escape
+        const isOl = /^\d+\.\s/.test(trimmedLine);
 
         if (isUl || isOl) {
             if (!inList) {
@@ -234,6 +234,22 @@ function processInlineMarkdown(text) {
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
             const isExternal = url.startsWith('http');
+            // Beautiful numbering for internal links
+            if (!isExternal && /^\d+$/.test(text)) {
+                 return `<a href="${url}" class="number-badge" style="
+                    display: inline-block;
+                    min-width: 20px;
+                    padding: 0 6px;
+                    border: 1px solid #58A6FF;
+                    border-radius: 12px;
+                    color: #58A6FF;
+                    text-decoration: none;
+                    text-align: center;
+                    font-size: 0.9em;
+                    margin: 0 2px;
+                    transition: all 0.2s;
+                " onmouseover="this.style.background='#58A6FF'; this.style.color='white'" onmouseout="this.style.background='transparent'; this.style.color='#58A6FF'">${text}</a>`;
+            }
             return `<a href="${url}"${isExternal ? ' target="_blank"' : ''} style="color: #58A6FF; text-decoration: underline;">${text}</a>`;
         });
 }
