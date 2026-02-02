@@ -422,26 +422,35 @@ function openInstruction(resourcePath) {
     // 1. Clean up the path and remove leading/trailing slashes
     let finalPath = processedPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
     
-    // 2. Extract the "clean ID" (path without 'docs/' prefix and without '.json')
-    if (finalPath.startsWith('docs/')) {
-        finalPath = finalPath.substring(5);
-    }
-    const id = finalPath.replace(/\.json$/, '');
+    // 2. Remove extension if present
+    finalPath = finalPath.replace(/\.json$/, '');
     
-    // 3. Update URL hash (always #/docs/[id])
+    // 3. Determine Fetch Path (Restore "docs/" default behavior)
+    // If the path does not start with "docs/", prepend it.
+    let fetchPath = finalPath;
+    if (!fetchPath.startsWith('docs/')) {
+        fetchPath = 'docs/' + fetchPath;
+    }
+
+    // 4. Update URL hash (always #/docs/[id])
+    // We strip 'docs/' from the start for the hash ID to keep it clean, if present.
+    let id = fetchPath;
+    if (id.startsWith('docs/')) {
+        id = id.substring(5);
+    }
+
     const url = new URL(window.location);
     url.search = '';
     url.hash = '#/docs/' + encodeURIComponent(id).replace(/%2F/g, '/'); 
     window.history.pushState({}, '', url.toString());
 
-    // 4. Construct final fetch URL (always inside docs/ folder in repo)
-    const fetchPath = 'docs/' + id + '.json';
+    // 5. Construct final fetch URL
     const fullUrl = contentBaseUrl + fetchPath;
 
     fetch(fullUrl)
         .then(res => {
             if(!res.ok) throw new Error(`Не удалось загрузить файл инструкции (Status: ${res.status})`);
-            return res.json();
+            return res.text();
         })
         .then(data => {
             if (window.renderInstructionContent) {
@@ -556,6 +565,9 @@ function initSearchEngine() {
             card.className = 'result-card';
             card.style.cursor = 'pointer';
 
+            const isExternal = item.link.startsWith('http');
+            const cleanLink = isExternal ? item.link : item.link.replace(/\.json$/, '');
+
             const tagsHtml = item.tags.split(',').map(tag => {
                 const trimmedTag = tag.trim();
                 const isActive = selectedTags.has(trimmedTag) ? 'is-active' : '';
@@ -563,9 +575,9 @@ function initSearchEngine() {
             }).join(' ');
             
             card.innerHTML = `
-                <a href="${item.link}" ${item.link.startsWith('http') ? 'target="_blank"' : ''} style="text-decoration: none; color: inherit; display: block;" class="card-link">
+                <a href="${cleanLink}" ${isExternal ? 'target="_blank"' : ''} style="text-decoration: none; color: inherit; display: block;" class="card-link">
                     <span class="result-title">${item.name}</span>
-                    <span class="result-link">${item.link}</span>
+                    <span class="result-link">${cleanLink}</span>
                     <div class="result-description">${item.description || ''}</div>
                 </a>
                 <div class="result-tags" style="margin-top: 8px;">${tagsHtml}</div>
@@ -575,8 +587,8 @@ function initSearchEngine() {
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.tag_container')) return;
                 e.preventDefault();
-                if (item.link.startsWith('http')) window.open(item.link, '_blank');
-                else openInstruction(item.link);
+                if (isExternal) window.open(item.link, '_blank');
+                else openInstruction(cleanLink);
             });
 
             resultsArea.appendChild(card);

@@ -5,21 +5,30 @@ window.renderInstructionContent = function(data, targetElementId) {
     const targetElement = document.getElementById(targetElementId);
     if (!targetElement) return;
 
-    const contentHtml = parseMarkdown(data.content);
+    let parsedData = data;
+    if (typeof data === 'string') {
+        try {
+            parsedData = JSON.parse(data);
+        } catch (e) {
+            parsedData = parseCustomFormat(data);
+        }
+    }
+
+    const contentHtml = parseMarkdown(parsedData.content);
     
     let headerHtml = '';
-    if (data.info) {
+    if (parsedData.info) {
             headerHtml = `<div class="instruction-header animate-text wait-animation">
-            <h1 class="instruction-title" style="color: #58A6FF;">${data.info.title}</h1>
+            <h1 class="instruction-title" style="color: #58A6FF;">${parsedData.info.title}</h1>
             <div class="meta-info-container">
                 <span class="meta-badge">
-                    <i class="fas fa-user meta-icon-user"></i> ${data.info.author}
+                    <i class="fas fa-user meta-icon-user"></i> ${parsedData.info.author}
                 </span>
                 <span class="meta-badge">
-                    <i class="fas fa-code-branch meta-icon-version"></i> v${data.info.version}
+                    <i class="fas fa-code-branch meta-icon-version"></i> v${parsedData.info.version}
                 </span>
                 <span class="meta-badge">
-                    <i class="far fa-calendar-alt meta-icon-date"></i> ${data.info.last_updated}
+                    <i class="far fa-calendar-alt meta-icon-date"></i> ${parsedData.info.last_updated}
                 </span>
             </div>
             </div>`;
@@ -35,6 +44,33 @@ window.renderInstructionContent = function(data, targetElementId) {
         }, index * 200); // Deliberate streaming effect
     });
 };
+
+function parseCustomFormat(text) {
+    const infoMatch = text.match(/@info<([\s\S]*?)>@info/);
+    const contentMatch = text.match(/@content<([\s\S]*?)>@content/);
+
+    const info = {};
+    if (infoMatch) {
+        const infoBody = infoMatch[1];
+        const regex = /([a-z_]+)<(.*?)>/g;
+        let match;
+        while ((match = regex.exec(infoBody)) !== null) {
+            info[match[1]] = match[2];
+        }
+    }
+
+    let contentLines = [];
+    if (contentMatch) {
+        // Trim newlines from start/end of the content block
+        const rawContent = contentMatch[1].replace(/^\s*[\r\n]/, '').replace(/[\r\n]\s*$/, '');
+        contentLines = rawContent.split(/\r?\n/);
+    }
+    
+    return {
+        info: info,
+        content: contentLines
+    };
+}
 
 // Global Copy Function
 window.copyCode = function(btn) {
@@ -103,10 +139,15 @@ function parseMarkdown(lines) {
     };
 
     lines.forEach((line) => {
-        // 0. CALCULATE INDENTATION (4 spaces = 1 level)
+        // 0. CALCULATE INDENTATION (4 spaces = 1 level, 1 tab = 1 level/4 spaces)
         // We do this before trimming to capture the visual hierarchy
-        const leadingSpaces = line.match(/^ */)[0].length;
-        const indentLevel = Math.floor(leadingSpaces / 4);
+        const leadingWhitespace = line.match(/^[\t ]*/)[0];
+        let spaceCount = 0;
+        for (const char of leadingWhitespace) {
+            if (char === '\t') spaceCount += 4;
+            else spaceCount += 1;
+        }
+        const indentLevel = Math.floor(spaceCount / 4);
         const indentPx = indentLevel * 25; // 25px per level
         const indentStyle = indentLevel > 0 ? `margin-left: ${indentPx}px;` : '';
 
