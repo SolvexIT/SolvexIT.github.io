@@ -232,5 +232,8 @@ function processInlineMarkdown(text) {
         .replace(/__(.*?)__/g, '<u>$1</u>')
         .replace(/~~(.*?)~~/g, '<del>$1</del>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\<([^\\]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #58A6FF; text-decoration: underline;">$1</a>');
+        .replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
+            const isExternal = url.startsWith('http');
+            return `<a href="${url}"${isExternal ? ' target="_blank"' : ''} style="color: #58A6FF; text-decoration: underline;">${text}</a>`;
+        });
 }
