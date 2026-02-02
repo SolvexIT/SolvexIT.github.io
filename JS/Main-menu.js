@@ -415,19 +415,32 @@ function openInstruction(resourcePath) {
         instructionsContent.innerHTML = '<div class="loading" style="text-align:center; padding:20px; color:#888;">Загрузка информации...</div>';
     }
 
-    const finalPath = resourcePath.replace(/^\/+/, '');
+    // Normalize path: decode, flip slashes, trim
+    let processedPath = resourcePath;
+    try { processedPath = decodeURIComponent(processedPath); } catch(e) {}
+    
+    // 1. Clean up the path and remove leading/trailing slashes
+    let finalPath = processedPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    
+    // 2. Extract the "clean ID" (path without 'docs/' prefix and without '.json')
+    if (finalPath.startsWith('docs/')) {
+        finalPath = finalPath.substring(5);
+    }
     const id = finalPath.replace(/\.json$/, '');
     
+    // 3. Update URL hash (always #/docs/[id])
     const url = new URL(window.location);
     url.search = '';
-    url.hash = '#/docs/' + id;
+    url.hash = '#/docs/' + encodeURIComponent(id).replace(/%2F/g, '/'); 
     window.history.pushState({}, '', url.toString());
 
-    const fullUrl = contentBaseUrl + (finalPath.endsWith('.json') ? finalPath : finalPath + '.json');
+    // 4. Construct final fetch URL (always inside docs/ folder in repo)
+    const fetchPath = 'docs/' + id + '.json';
+    const fullUrl = contentBaseUrl + fetchPath;
 
     fetch(fullUrl)
         .then(res => {
-            if(!res.ok) throw new Error('Не удалось загрузить файл инструкции');
+            if(!res.ok) throw new Error(`Не удалось загрузить файл инструкции (Status: ${res.status})`);
             return res.json();
         })
         .then(data => {
@@ -442,6 +455,10 @@ function openInstruction(resourcePath) {
             instructionsContent.innerHTML = `<div class="error-msg" style="color:#ff6b6b; text-align:center;">
                 <h3>Ошибка загрузки</h3>
                 <p>${err.message}</p>
+                <div style="font-size:0.8em; color:#888; margin:10px 0; word-break:break-all; background:#222; padding:5px; border-radius:4px;">
+                    Trying to fetch:<br>
+                    <a href="${fullUrl}" target="_blank" style="color:#58A6FF;">${fullUrl}</a>
+                </div>
                 <button onclick="closeInstruction()" style="margin-top:20px; padding:8px 16px; background:#333; color:white; border:none; cursor:pointer;">Назад</button>
             </div>`;
         });
