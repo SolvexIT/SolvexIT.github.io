@@ -110,12 +110,23 @@ function parseMarkdown(lines) {
         const isOl = /^\d+\.\s/.test(trimmedLine);
 
         if (isUl || isOl) {
+            const newListType = isUl ? 'ul' : 'ol';
+            
             if (!inList) {
+                // START NEW LIST
                 inList = true;
-                listType = isUl ? 'ul' : 'ol';
+                listType = newListType;
+                html += `<${listType} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px;">
+`;
+            } else if (listType !== newListType) {
+                // SWITCH LIST TYPE (Close old, start new)
+                html += `</${listType}>
+`;
+                listType = newListType;
                 html += `<${listType} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px;">
 `;
             }
+
             const content = trimmedLine.substring(isUl ? 2 : trimmedLine.indexOf(' ') + 1);
             html += `<li style="margin-bottom: 5px;">${processInlineMarkdown(content)}</li>
 `;
@@ -228,6 +239,8 @@ function parseMarkdown(lines) {
 
 function processInlineMarkdown(text) {
     return text
+        .replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; color: #ff9f43; font-family: Consolas, monospace; font-size: 0.9em;">$1</code>')
+        .replace(/==(.*?)==/g, '<mark style="background: rgba(88, 166, 255, 0.3); color: #fff; padding: 0 4px; border-radius: 4px;">$1</mark>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/__(.*?)__/g, '<u>$1</u>')
         .replace(/~~(.*?)~~/g, '<del>$1</del>')
