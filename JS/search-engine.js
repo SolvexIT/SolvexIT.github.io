@@ -12,23 +12,52 @@ document.addEventListener('DOMContentLoaded', () => {
     let itemsToShow = 5; // Сколько показывать сразу
     const loadMoreStep = 10; // Сколько добавлять при нажатии кнопки
 
-    // 1. Загружаем данные по ссылке
-    const databaseUrl = 'https://gist.githubusercontent.com/SolvexIT/6c9d9ebc89835f8812cfb66d18268324/raw';
+    const databaseUrlBase = 'https://gist.githubusercontent.com/SolvexIT/6c9d9ebc89835f8812cfb66d18268324/raw';
 
-    fetch(databaseUrl)
-        .then(response => {
-            if (!response.ok) throw new Error('Ошибка сети');
-            return response.json();
-        })
-        .then(data => {
-            db = data;
-            createTagFilters(db);
-            filterAndRender(false); // Показываем первые itemsToShow при старте
-        })
-        .catch(error => {
-            console.error('Ошибка:', error);
-            resultsArea.innerHTML = '<div class="no-results">Ошибка загрузки базы. Проверьте интернет.</div>';
-        });
+    // --- ФУНКЦИЯ ЗАГРУЗКИ ДАННЫХ (С автообновлением) ---
+    function loadDatabase(isInitialLoad = false) {
+        // Cache Busting: добавляем время к URL, чтобы не брать из кэша
+        const timestamp = new Date().getTime();
+        const urlWithCacheBuster = `${databaseUrlBase}?t=${timestamp}`;
+
+        fetch(urlWithCacheBuster)
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка сети');
+                return response.json();
+            })
+            .then(data => {
+                const oldDbJson = JSON.stringify(db);
+                const newDbJson = JSON.stringify(data);
+                
+                // Обновляем только если данные реально изменились
+                if (oldDbJson !== newDbJson) {
+                    db = data;
+                    if (isInitialLoad) {
+                        createTagFilters(db);
+                        filterAndRender(true); // Полный рендер при старте
+                    } else {
+                        // Тихое обновление: сохраняем текущее положение и фильтры
+                        // Если тегов стало больше, фильтр обновится при следующем поиске или клике
+                        console.log('Database updated automatically at ' + new Date().toLocaleTimeString());
+                        filterAndRender(false); // false = не сбрасывать itemsToShow, чтобы не дергать список
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки:', error);
+                if (isInitialLoad) {
+                    resultsArea.innerHTML = '<div class="no-results">Ошибка загрузки базы. Проверьте интернет.</div>';
+                }
+            });
+    }
+
+    // 1. Первая загрузка
+    loadDatabase(true);
+
+    // 2. Автообновление каждые 60 секунд (60000 мс)
+    setInterval(() => {
+        loadDatabase(false);
+    }, 60000);
 
     // --- ОПТИМИЗАЦИЯ: DEBOUNCE (Задержка поиска) ---
     function debounce(func, wait) {
@@ -41,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Слушаем ввод (задержка 300мс перед поиском)
     searchInput.addEventListener('input', debounce(() => {
-        filterAndRender();
+        filterAndRender(true); // При вводе сбрасываем пагинацию
     }, 300));
 
     // --- ГЛАВНАЯ ФУНКЦИЯ ФИЛЬТРАЦИИ ---
@@ -218,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function updateTagsUI() {
             renderSelectedTags();
             renderAvailableTags(tagSearchInput.value);
-            filterAndRender(); // <-- Самое важное: запускаем поиск
+            filterAndRender(true); // <-- Сбрасываем пагинацию при смене тегов
         }
         updateTagsUI_External = updateTagsUI;
 

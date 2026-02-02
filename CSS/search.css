@@ -347,7 +347,7 @@ body {
     border-radius: 8px;
     margin: 10px 0;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    display: block; /* Fix inline image spacing */
+    display: inline-block; /* Fix for text-align positioning */
 }
 
 /* Code Blocks - Scrollable */
@@ -469,8 +469,14 @@ body {
     color: #58A6FF;
     margin-bottom: 15px;
     font-size: 2em;
-    text-shadow: 0 0 10px rgba(88, 166, 255, 0.2);
+    text-shadow: 0 0 15px rgba(88, 166, 255, 0.4), 0 0 30px rgba(88, 166, 255, 0.2); /* Enhanced Glow */
     line-height: 1.2;
+}
+
+/* Staggered Animation Control */
+.animate-text.wait-animation {
+    animation: none !important;
+    opacity: 0 !important;
 }
 
 .meta-info-container {
@@ -519,7 +525,7 @@ body {
 
     /* Instruction Header on Mobile */
     .instruction-header {
-        text-align: left;
+        text-align: center;
         padding-right: 0;
     }
 
@@ -528,16 +534,17 @@ body {
         word-break: break-word; /* Ensure title breaks */
     }
 
-    .instruction-header .meta-info {
+    .meta-info-container {
         display: flex;
-        flex-direction: column;
-        gap: 5px;
-        align-items: flex-start;
+        flex-direction: row; /* Keep row direction but wrap */
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
     }
 
-    .meta-info span {
-        margin-right: 0 !important;
-        font-size: 0.85rem;
+    .meta-badge {
+        font-size: 0.8rem;
+        padding: 4px 10px;
     }
 
     /* Adjust Card Styles */
