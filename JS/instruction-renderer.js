@@ -138,9 +138,57 @@ function parseMarkdown(lines) {
         'danger': '#f85149'
     };
 
+    // Helper: Pre-process media placeholders
+    const preprocessMedia = (text) => {
+        const placeholders = [];
+        const processedText = text.replace(/(button|img)\{(.*?)\}/g, (match) => {
+            placeholders.push(match);
+            return `%%PH${placeholders.length - 1}%%`;
+        });
+        return { text: processedText, placeholders };
+    };
+
+    // Helper: Restore media placeholders
+    const restoreMedia = (text, placeholders, indentStyle = '') => {
+        return text.replace(/%%PH(\d+)%%/g, (match, idx) => {
+            const original = placeholders[idx];
+            
+            if (original.startsWith('button')) {
+                return original.replace(/button\{(.*?)\}/g, (m, content) => {
+                    let type = 'default', label = 'Link', url = '#';
+                    if (content.includes('<') || content.includes('&lt;')) {
+                        const tM = content.match(/(?:type|color)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                        if (tM) type = tM[1].trim();
+                        const lM = content.match(/(?:label|text)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                        if (lM) label = lM[1].trim();
+                        const uM = content.match(/(?:url|link)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                        if (uM) url = uM[1].trim();
+                    } else {
+                        const parts = content.replace(/`/g, '').split('_');
+                        if (parts.length >= 3) { type = parts[0]; label = parts[1]; url = parts.slice(2).join('_'); }
+                    }
+                    const bgColor = typeColorMap[type.toLowerCase()];
+                    return `<a href="${url.replace(/&amp;/g, '&')}" target="_blank" class="download-btn animate-text wait-animation ${type.toLowerCase()}" style="display:inline-block; padding:10px 20px; ${bgColor ? `background:${bgColor};` : ''} color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconMap[label.toLowerCase()] || 'fas fa-link'}"></i> ${label}</a>`;
+                });
+            } else {
+                return original.replace(/img\{(.*?)\}/g, (m, content) => {
+                    let src = '', pos = 'center', size = '100%';
+                    const lM = content.match(/(?:link|url)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                    if (lM) src = lM[1].trim();
+                    const pM = content.match(/position\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                    if (pM) pos = pM[1].toLowerCase().trim();
+                    const sM = content.match(/size\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                    if (sM) size = sM[1].trim();
+                    if (!src) return '';
+                    // Apply indentStyle to the image container
+                    return `<div class="img-container animate-text wait-animation" style="margin: 20px 0; ${indentStyle} text-align: ${pos === 'left' ? 'left' : (pos === 'right' ? 'right' : 'center')};"><img src="${src.replace(/&amp;/g, '&')}" style="width: ${size}; max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" alt="Image"></div>`;
+                });
+            }
+        });
+    };
+
     lines.forEach((line) => {
         // 0. CALCULATE INDENTATION (4 spaces = 1 level, 1 tab = 1 level/4 spaces)
-        // We do this before trimming to capture the visual hierarchy
         const leadingWhitespace = line.match(/^[\t ]*/)[0];
         let spaceCount = 0;
         for (const char of leadingWhitespace) {
@@ -161,28 +209,26 @@ function parseMarkdown(lines) {
             const newListType = isUl ? 'ul' : 'ol';
             
             if (!inList) {
-                // START NEW LIST
                 inList = true;
                 listType = newListType;
-                html += `<${listType} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px;">
-`;
+                html += `<${listType} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px;">\n`;
             } else if (listType !== newListType) {
-                // SWITCH LIST TYPE (Close old, start new)
-                html += `</${listType}>
-`;
+                html += `</${listType}>\n`;
                 listType = newListType;
-                html += `<${listType} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px;">
-`;
+                html += `<${listType} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px;">\n`;
             }
 
             const content = trimmedLine.substring(isUl ? 2 : trimmedLine.indexOf(' ') + 1);
-            // Apply indentation specifically to the list item
-            html += `<li style="margin-bottom: 5px; ${indentStyle}">${processInlineMarkdown(content)}</li>
-`;
+            
+            // PROCESS CONTENT: Preprocess media -> Inline MD -> Restore media
+            const pre = preprocessMedia(content);
+            const mid = processInlineMarkdown(pre.text);
+            const final = restoreMedia(mid, pre.placeholders, ''); // No extra indent inside LI
+            
+            html += `<li style="margin-bottom: 5px; ${indentStyle}">${final}</li>\n`;
             return;
         } else if (inList) {
-            html += `</${listType}>
-`;
+            html += `</${listType}>\n`;
             inList = false;
         }
 
@@ -190,7 +236,6 @@ function parseMarkdown(lines) {
         if (trimmedLine.startsWith('```')) {
             inCodeBlock = !inCodeBlock;
             if (inCodeBlock) {
-                // Apply indentation to the wrapper of the code block too if needed
                 codeLang = line.trim().substring(3).trim();
                 html += `<div class="code-block-wrapper animate-text wait-animation" style="${indentStyle}">
                             <div class="code-header">
@@ -227,63 +272,26 @@ function parseMarkdown(lines) {
             processedLine = `<blockquote class="animate-text wait-animation" style="${indentStyle}">${processedLine.substring(5)}</blockquote>`;
         }
 
-        // TEMPORARY PLACEHOLDERS for buttons/images to avoid double-processing
-        const placeholders = [];
-        processedLine = processedLine.replace(/(button|img)\{(.*?)\}/g, (match) => {
-            placeholders.push(match);
-            return `%%PH${placeholders.length - 1}%%`;
-        });
+        // TEMPORARY PLACEHOLDERS
+        const pre = preprocessMedia(processedLine);
+        processedLine = pre.text;
 
         // Process MD inside tags or paragraphs
         if (processedLine.startsWith('<h') || processedLine.startsWith('<blockquote')) {
-            processedLine = processedLine.replace(/>(.*?)<\//, (m, inner) => `>${processInlineMarkdown(inner)}</`); // Corrected regex escape
+            processedLine = processedLine.replace(/>(.*?)<\//, (m, inner) => `>${processInlineMarkdown(inner)}</`); 
         } else if (!processedLine.startsWith('<')) {
             processedLine = processInlineMarkdown(processedLine);
             processedLine = (trimmedLine === '') ? '<br>' : `<p class="animate-text wait-animation" style="${indentStyle}">${processedLine}</p>`;
         }
 
-        // RESTORE placeholders with full parsing
-        processedLine = processedLine.replace(/%%PH(\d+)%%/g, (match, idx) => {
-            const original = placeholders[idx];
-            
-            // Re-parse the original placeholder content
-            if (original.startsWith('button')) {
-                return original.replace(/button\{(.*?)\}/g, (m, content) => {
-                    let type = 'default', label = 'Link', url = '#';
-                    if (content.includes('<') || content.includes('&lt;')) {
-                        const tM = content.match(/(?:type|color)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
-                        if (tM) type = tM[1].trim();
-                        const lM = content.match(/(?:label|text)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
-                        if (lM) label = lM[1].trim();
-                        const uM = content.match(/(?:url|link)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
-                        if (uM) url = uM[1].trim();
-                    } else {
-                        const parts = content.replace(/`/g, '').split('_');
-                        if (parts.length >= 3) { type = parts[0]; label = parts[1]; url = parts.slice(2).join('_'); }
-                    }
-                    const bgColor = typeColorMap[type.toLowerCase()];
-                    return `<a href="${url.replace(/&amp;/g, '&')}" target="_blank" class="download-btn animate-text wait-animation ${type.toLowerCase()}" style="display:inline-block; padding:10px 20px; ${bgColor ? `background:${bgColor};` : ''} color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconMap[label.toLowerCase()] || 'fas fa-link'}"></i> ${label}</a>`;
-                });
-            } else {
-                return original.replace(/img\{(.*?)\}/g, (m, content) => {
-                    let src = '', pos = 'center', size = '100%';
-                    const lM = content.match(/(?:link|url)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
-                    if (lM) src = lM[1].trim();
-                    const pM = content.match(/position\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
-                    if (pM) pos = pM[1].toLowerCase().trim();
-                    const sM = content.match(/size\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
-                    if (sM) size = sM[1].trim();
-                    if (!src) return '';
-                    return `<div class="img-container animate-text wait-animation" style="margin: 20px 0; text-align: ${pos === 'left' ? 'left' : (pos === 'right' ? 'right' : 'center')};"><img src="${src.replace(/&amp;/g, '&')}" style="width: ${size}; max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" alt="Image"></div>`;
-                });
-            }
-        });
+        // RESTORE placeholders
+        // Pass indentStyle here so it's applied to the media container if it wasn't wrapped in a styled tag
+        processedLine = restoreMedia(processedLine, pre.placeholders, indentStyle);
 
         html += processedLine;
     });
     
-    if (inList) html += `</${listType}>
-`;
+    if (inList) html += `</${listType}>\n`;
     return html;
 }
 
