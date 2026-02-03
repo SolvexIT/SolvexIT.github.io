@@ -707,6 +707,72 @@ window.addEventListener('load', () => {
     window.addEventListener('popstate', handleRouting);
 });
 
+window.handleAnchorClick = function(slug) {
+    // Current hash structure: #/docs/path/to/file OR #/docs/path/to/file#currentAnchor
+    // We want to replace/append the anchor.
+    const currentHash = window.location.hash;
+    
+    // Check if we are in docs mode
+    if (!currentHash.startsWith('#/docs/')) return;
+    
+    // Extract base path (everything before the second #)
+    // The first # is at index 0. The docs path starts at index 1.
+    // We need to find the SECOND #.
+    const parts = currentHash.split('#'); 
+    // parts[0] is empty (before first #)
+    // parts[1] is "/docs/path/to/file" (or "search", etc)
+    // parts[2] is the anchor if present.
+    
+    const basePath = parts[1]; 
+    
+    if (!basePath) return;
+
+    const newHash = '#' + basePath + '#' + slug;
+
+    if (window.location.hash !== newHash) {
+        isInternalRouteUpdate = true;
+        window.location.hash = newHash;
+        setTimeout(() => { isInternalRouteUpdate = false; }, 300);
+    }
+    
+    scrollToAnchor(slug);
+};
+
+function scrollToAnchor(id) {
+    if (!id) return;
+
+    // Helper to match renderer's ID generation
+    const slugify = (text) => {
+        try {
+             return decodeURIComponent(text).toLowerCase().trim().replace(/[^\w\u0400-\u04FF\s-]/g, '').replace(/\s+/g, '-');
+        } catch(e) {
+             return text.toLowerCase().trim().replace(/[^\w\u0400-\u04FF\s-]/g, '').replace(/\s+/g, '-');
+        }
+    };
+
+    const targetId = id;
+    const slugId = slugify(id);
+
+    // Retry a few times in case of rendering/loading delays
+    const attemptScroll = (count) => {
+        // Try exact ID first, then slugified ID
+        let el = document.getElementById(targetId);
+        if (!el) el = document.getElementById(slugId);
+        
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Optional: flash highlight
+            el.style.transition = 'background 0.5s';
+            const originalBg = el.style.background;
+            el.style.background = 'rgba(88, 166, 255, 0.2)';
+            setTimeout(() => { el.style.background = originalBg; }, 1000);
+        } else if (count > 0) {
+            setTimeout(() => attemptScroll(count - 1), 200);
+        }
+    };
+    attemptScroll(5);
+}
+
 function handleRouting() {
     if (isInternalRouteUpdate) return;
 
@@ -717,11 +783,20 @@ function handleRouting() {
     if (hash === '#/search') {
         startSearchAnimation(true);
     } else if (hash.startsWith('#/docs/') && hash.length > 7) {
-        const path = hash.substring(7);
+        let path = hash.substring(7);
+        let anchor = null;
+        
+        // Handle anchor in URL (e.g. #/docs/path#header-id)
+        const parts = path.split('#');
+        if (parts.length > 1) {
+            path = parts[0];
+            anchor = parts.slice(1).join('#'); // Join remainder just in case
+        }
+
         if (!document.body.classList.contains('view-mode')) {
             startSearchAnimation(true);
         }
-        openInstruction(path);
+        openInstruction(path, anchor);
     } else if (hasSearch && !hash) {
         setHash('#/search');
     } else if (!hash) {

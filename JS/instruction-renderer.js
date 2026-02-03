@@ -137,6 +137,8 @@ function parseMarkdown(lines) {
         'warning': '#d29922',
         'danger': '#f85149'
     };
+    
+    const slugify = (text) => text.toLowerCase().trim().replace(/[^\w\u0400-\u04FF\s-]/g, '').replace(/\s+/g, '-');
 
     // Helper: Pre-process media placeholders
     const preprocessMedia = (text) => {
@@ -263,9 +265,18 @@ function parseMarkdown(lines) {
         let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
         // Headers
-        if (processedLine.startsWith('### ')) processedLine = `<h3 class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${processedLine.substring(4)}</h3>`;
-        else if (processedLine.startsWith('## ')) processedLine = `<h2 class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${processedLine.substring(3)}</h2>`;
-        else if (processedLine.startsWith('# ')) processedLine = `<h1 class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${processedLine.substring(2)}</h1>`;
+        if (processedLine.startsWith('### ')) {
+            const text = processedLine.substring(4);
+            processedLine = `<h3 id="${slugify(text)}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}</h3>`;
+        }
+        else if (processedLine.startsWith('## ')) {
+             const text = processedLine.substring(3);
+             processedLine = `<h2 id="${slugify(text)}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}</h2>`;
+        }
+        else if (processedLine.startsWith('# ')) {
+             const text = processedLine.substring(2);
+             processedLine = `<h1 id="${slugify(text)}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}</h1>`;
+        }
         
         // Quotes
         if (processedLine.startsWith('&gt; ')) {
@@ -303,6 +314,11 @@ function processInlineMarkdown(text) {
         .replace(/__(.*?)__/g, '<u>$1</u>')
         .replace(/~~(.*?)~~/g, '<del>$1</del>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\[\[#([^|\]]+)\|?(.*?)\]\]/g, (match, anchor, text) => {
+            const label = text || anchor;
+            const slug = anchor.toLowerCase().trim().replace(/[^\w\u0400-\u04FF\s-]/g, '').replace(/\s+/g, '-');
+            return `<a href="javascript:void(0)" onclick="handleAnchorClick('${slug}')" style="color: #58A6FF; text-decoration: underline; cursor: pointer;">${label}</a>`;
+        })
         .replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
             const isExternal = url.startsWith('http');
             // Beautiful numbering for internal links
