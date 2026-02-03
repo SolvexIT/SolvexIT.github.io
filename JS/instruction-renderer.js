@@ -1,6 +1,48 @@
 // --- INSTRUCTION RENDERER ---
 // Handles parsing Markdown and rendering the instruction view content.
 
+// Inject styles for anchor buttons
+const style = document.createElement('style');
+style.textContent = `
+    .anchor-btn {
+        opacity: 0;
+        margin-left: 10px;
+        background: none;
+        border: none;
+        color: #58A6FF;
+        cursor: pointer;
+        font-size: 0.8em;
+        transition: opacity 0.2s, transform 0.2s;
+        padding: 5px;
+    }
+    h1:hover .anchor-btn, h2:hover .anchor-btn, h3:hover .anchor-btn {
+        opacity: 1;
+    }
+    .anchor-btn:hover {
+        transform: scale(1.2);
+        color: #79c0ff;
+    }
+    .anchor-tooltip {
+        position: fixed;
+        background: #333;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        z-index: 1000;
+        animation: fadeInOut 2s ease forwards;
+        border: 1px solid #58A6FF;
+    }
+    @keyframes fadeInOut {
+        0% { opacity: 0; transform: translateY(5px); }
+        10% { opacity: 1; transform: translateY(0); }
+        80% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-5px); }
+    }
+`;
+document.head.appendChild(style);
+
 window.renderInstructionContent = function(data, targetElementId, options = {}) {
     const targetElement = document.getElementById(targetElementId);
     if (!targetElement) return;
@@ -77,7 +119,49 @@ function parseCustomFormat(text) {
     };
 }
 
-// Global Copy Function
+// Global Anchor Copy Function
+window.copyAnchorLink = function(slug, btn) {
+    const baseUrl = window.location.href.split('#')[0];
+    const hash = window.location.hash.split('#');
+    // hash[0] is empty, hash[1] is path. Ensure we construct clean URL.
+    const path = hash[1] ? hash[1] : '';
+    
+    const fullUrl = `${baseUrl}#${path}#${slug}`;
+    
+    // Use fallback if clipboard API fails
+    const copyToClipboard = (text) => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return Promise.resolve();
+        }
+    };
+
+    copyToClipboard(fullUrl).then(() => {
+        // Update URL silently
+        try { history.replaceState({}, '', fullUrl); } catch(e) {}
+        
+        // Show Tooltip
+        const tooltip = document.createElement('div');
+        tooltip.className = 'anchor-tooltip';
+        tooltip.innerHTML = '<i class="fas fa-check"></i> Ссылка скопирована';
+        
+        const rect = btn.getBoundingClientRect();
+        tooltip.style.left = `${rect.left + 20}px`;
+        tooltip.style.top = `${rect.top - 10}px`;
+        
+        document.body.appendChild(tooltip);
+        setTimeout(() => tooltip.remove(), 2000);
+    });
+};
+
+// Global Copy Function for Code Blocks
 window.copyCode = function(btn) {
     const wrapper = btn.closest('.code-block-wrapper');
     const codeBlock = wrapper.querySelector('code');
@@ -272,15 +356,18 @@ function parseMarkdown(lines) {
         // Headers
         if (processedLine.startsWith('### ')) {
             const text = processedLine.substring(4);
-            processedLine = `<h3 id="${slugify(text)}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}</h3>`;
+            const slug = slugify(text);
+            processedLine = `<h3 id="${slug}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}<button class="anchor-btn" onclick="copyAnchorLink('${slug}', this)" title="Копировать ссылку"><i class="fas fa-link"></i></button></h3>`;
         }
         else if (processedLine.startsWith('## ')) {
              const text = processedLine.substring(3);
-             processedLine = `<h2 id="${slugify(text)}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}</h2>`;
+             const slug = slugify(text);
+             processedLine = `<h2 id="${slug}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}<button class="anchor-btn" onclick="copyAnchorLink('${slug}', this)" title="Копировать ссылку"><i class="fas fa-link"></i></button></h2>`;
         }
         else if (processedLine.startsWith('# ')) {
              const text = processedLine.substring(2);
-             processedLine = `<h1 id="${slugify(text)}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}</h1>`;
+             const slug = slugify(text);
+             processedLine = `<h1 id="${slug}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}<button class="anchor-btn" onclick="copyAnchorLink('${slug}', this)" title="Копировать ссылку"><i class="fas fa-link"></i></button></h1>`;
         }
         
         // Quotes

@@ -400,8 +400,76 @@ function updateURLState(params) {
 
 // NOTE: parseMarkdown removed from here, now in JS/instruction-renderer.js
 
+// --- SCROLL MANAGEMENT & RESTORATION ---
+
+function saveScrollPosition(path) {
+    const container = document.getElementById('instructionsContainer');
+    if (container) {
+        // Use sessionStorage to persist across reloads but clear on tab close
+        // Key includes path to be specific to the document
+        sessionStorage.setItem('scrollPos_' + path, container.scrollTop);
+    }
+}
+
+function restoreScrollPosition(path) {
+    const container = document.getElementById('instructionsContainer');
+    const savedPos = sessionStorage.getItem('scrollPos_' + path);
+    if (container && savedPos !== null) {
+        // Delay slightly to ensure layout is stable
+        setTimeout(() => {
+            container.scrollTo({ top: parseInt(savedPos), behavior: 'auto' });
+        }, 50);
+    }
+}
+
+let scrollDebounceTimer;
+function handleScrollSpy(path) {
+    const container = document.getElementById('instructionsContainer');
+    if (!container) return;
+
+    // Save Position
+    if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+    scrollDebounceTimer = setTimeout(() => {
+        saveScrollPosition(path);
+        updateActiveAnchorOnScroll(path);
+    }, 150);
+}
+
+function updateActiveAnchorOnScroll(basePath) {
+    // Basic ScrollSpy: Find the header closest to the top
+    const headers = document.querySelectorAll('#instructionsContent h1, #instructionsContent h2, #instructionsContent h3');
+    const container = document.getElementById('instructionsContainer');
+    
+    if (!headers.length || !container) return;
+
+    let currentHeader = null;
+    const containerTop = container.scrollTop;
+    // Offset for header height/padding
+    const offset = 100; 
+
+    headers.forEach(header => {
+        if (header.offsetTop <= containerTop + offset) {
+            currentHeader = header;
+        }
+    });
+
+    if (currentHeader && currentHeader.id) {
+        const newHash = '#/docs/' + basePath + '#' + currentHeader.id;
+        // Only update if changed
+        if (window.location.hash !== newHash) {
+            isInternalRouteUpdate = true;
+            try {
+                history.replaceState(null, null, newHash);
+            } catch(e) {}
+            // Reset flag after a short delay
+            setTimeout(() => { isInternalRouteUpdate = false; }, 300);
+        }
+    }
+}
+
 function openInstruction(resourcePath, anchor = null) {
     const instructionsContent = document.getElementById('instructionsContent');
+    const instructionsContainer = document.getElementById('instructionsContainer');
     
     const clearBtn = document.getElementById('clearSearchBtn');
     if (clearBtn) clearBtn.click();
@@ -458,6 +526,15 @@ function openInstruction(resourcePath, anchor = null) {
     // 5. Construct final fetch URL
     const fullUrl = contentBaseUrl + fetchPath;
 
+    // Remove old listeners to prevent stacking
+    const container = document.getElementById('instructionsContainer');
+    if (container) {
+         // We can't easily remove anonymous functions or bounded args without storing ref.
+         // Simple trick: clone and replace to strip listeners, OR just set onscroll.
+         // Setting onscroll is safer/easier here.
+         container.onscroll = () => handleScrollSpy(id);
+    }
+
     fetch(fullUrl)
         .then(res => {
             if(!res.ok) throw new Error(`Не удалось загрузить файл инструкции (Status: ${res.status})`);
@@ -466,13 +543,19 @@ function openInstruction(resourcePath, anchor = null) {
         .then(data => {
             if (window.renderInstructionContent) {
                 // If anchor is present, pass instant: true
-                window.renderInstructionContent(data, 'instructionsContent', { instant: !!anchor });
+                // Also pass instant if restoring scroll, to avoid jumping content
+                const shouldBeInstant = !!anchor || sessionStorage.getItem('scrollPos_' + id) !== null;
+                
+                window.renderInstructionContent(data, 'instructionsContent', { instant: shouldBeInstant });
                 
                 // If anchor exists, scroll to it immediately
                 if (anchor) {
                     setTimeout(() => {
                         scrollToAnchor(anchor);
-                    }, 50); // Small delay to ensure DOM update
+                    }, 50); 
+                } else {
+                    // Restore position if no specific anchor requested
+                    restoreScrollPosition(id);
                 }
             } else {
                 throw new Error("Renderer not found");
