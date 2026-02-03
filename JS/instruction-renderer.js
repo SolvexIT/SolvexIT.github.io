@@ -1,7 +1,7 @@
 // --- INSTRUCTION RENDERER ---
 // Handles parsing Markdown and rendering the instruction view content.
 
-window.renderInstructionContent = function(data, targetElementId) {
+window.renderInstructionContent = function(data, targetElementId, options = {}) {
     const targetElement = document.getElementById(targetElementId);
     if (!targetElement) return;
 
@@ -36,13 +36,18 @@ window.renderInstructionContent = function(data, targetElementId) {
 
     targetElement.innerHTML = headerHtml + contentHtml;
 
-    // Trigger Streaming Animation
+    // Trigger Streaming Animation or Instant Show
     const animatedElements = targetElement.querySelectorAll('.wait-animation');
-    animatedElements.forEach((el, index) => {
-        setTimeout(() => {
-            el.classList.remove('wait-animation');
-        }, index * 200); // Deliberate streaming effect
-    });
+    
+    if (options.instant) {
+        animatedElements.forEach(el => el.classList.remove('wait-animation'));
+    } else {
+        animatedElements.forEach((el, index) => {
+            setTimeout(() => {
+                el.classList.remove('wait-animation');
+            }, index * 200); // Deliberate streaming effect
+        });
+    }
 };
 
 function parseCustomFormat(text) {

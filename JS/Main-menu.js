@@ -400,7 +400,7 @@ function updateURLState(params) {
 
 // NOTE: parseMarkdown removed from here, now in JS/instruction-renderer.js
 
-function openInstruction(resourcePath) {
+function openInstruction(resourcePath, anchor = null) {
     const instructionsContent = document.getElementById('instructionsContent');
     
     const clearBtn = document.getElementById('clearSearchBtn');
@@ -439,10 +439,21 @@ function openInstruction(resourcePath) {
         id = id.substring(5);
     }
 
-    const url = new URL(window.location);
-    url.search = '';
-    url.hash = '#/docs/' + encodeURIComponent(id).replace(/%2F/g, '/'); 
-    window.history.pushState({}, '', url.toString());
+    // Construct clean hash. Use decoded ID if possible for display.
+    let newHash = '#/docs/' + id;
+    if (anchor) {
+        newHash += '#' + anchor;
+    }
+
+    // Use replaceState/pushState to avoid double encoding by browser if possible
+    // Note: window.location.hash = ... automatically encodes some chars.
+    // We try to push the "clean" decoded version.
+    try {
+        window.history.pushState({}, '', newHash);
+    } catch(e) {
+        // Fallback
+        window.location.hash = newHash;
+    }
 
     // 5. Construct final fetch URL
     const fullUrl = contentBaseUrl + fetchPath;
@@ -454,7 +465,15 @@ function openInstruction(resourcePath) {
         })
         .then(data => {
             if (window.renderInstructionContent) {
-                window.renderInstructionContent(data, 'instructionsContent');
+                // If anchor is present, pass instant: true
+                window.renderInstructionContent(data, 'instructionsContent', { instant: !!anchor });
+                
+                // If anchor exists, scroll to it immediately
+                if (anchor) {
+                    setTimeout(() => {
+                        scrollToAnchor(anchor);
+                    }, 50); // Small delay to ensure DOM update
+                }
             } else {
                 throw new Error("Renderer not found");
             }
@@ -709,29 +728,33 @@ window.addEventListener('load', () => {
 
 window.handleAnchorClick = function(slug) {
     // Current hash structure: #/docs/path/to/file OR #/docs/path/to/file#currentAnchor
-    // We want to replace/append the anchor.
     const currentHash = window.location.hash;
     
     // Check if we are in docs mode
     if (!currentHash.startsWith('#/docs/')) return;
     
     // Extract base path (everything before the second #)
-    // The first # is at index 0. The docs path starts at index 1.
-    // We need to find the SECOND #.
     const parts = currentHash.split('#'); 
-    // parts[0] is empty (before first #)
-    // parts[1] is "/docs/path/to/file" (or "search", etc)
-    // parts[2] is the anchor if present.
+    // parts[0] is empty, parts[1] is base route
     
     const basePath = parts[1]; 
-    
     if (!basePath) return;
 
+    // We want clear URLs.
     const newHash = '#' + basePath + '#' + slug;
 
+    // Avoid triggering full route reload loop if only anchor changed
     if (window.location.hash !== newHash) {
         isInternalRouteUpdate = true;
-        window.location.hash = newHash;
+        // Replace state to avoid history spam for anchor jumps, or pushState if you want back button support.
+        // Using replaceState is often cleaner for in-page anchors unless precise history is needed.
+        // But user might want to go "back" to previous section. Let's use pushState.
+        // Decoding basePath if it was encoded ensures cleaner URL.
+        try {
+            history.pushState({}, '', newHash);
+        } catch(e) {
+            window.location.hash = newHash;
+        }
         setTimeout(() => { isInternalRouteUpdate = false; }, 300);
     }
     
