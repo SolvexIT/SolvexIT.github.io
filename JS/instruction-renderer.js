@@ -255,8 +255,32 @@ function parseMarkdown(lines) {
                         const parts = content.replace(/`/g, '').split('_');
                         if (parts.length >= 3) { type = parts[0]; label = parts[1]; url = parts.slice(2).join('_'); }
                     }
+                    
+                    let processedUrl = url.replace(/&amp;/g, '&');
+                    const isExternal = processedUrl.match(/^https?:\/\//i);
+                    let targetAttr = 'target="_blank"';
+                    
+                    if (!isExternal) {
+                        targetAttr = '';
+                        // Internal Link Logic (match Search Cards)
+                        // 1. Remove .json extension
+                        processedUrl = processedUrl.replace(/\.json$/i, '');
+                        // 2. Ensure hash routing
+                        if (!processedUrl.startsWith('#')) {
+                            // If it's a bare path like "software/app", make it "#/docs/software/app"
+                            // If it already has docs/, just ensure prefix
+                            let cleanPath = processedUrl;
+                            if (cleanPath.startsWith('docs/')) {
+                                cleanPath = cleanPath.substring(5);
+                            }
+                            // Don't double slash
+                            cleanPath = cleanPath.replace(/^\/+/, '');
+                            processedUrl = '#/docs/' + cleanPath;
+                        }
+                    }
+
                     const bgColor = typeColorMap[type.toLowerCase()];
-                    return `<a href="${url.replace(/&amp;/g, '&')}" target="_blank" class="download-btn animate-text wait-animation ${type.toLowerCase()}" style="display:inline-block; padding:10px 20px; ${bgColor ? `background:${bgColor};` : ''} color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconMap[label.toLowerCase()] || 'fas fa-link'}"></i> ${label}</a>`;
+                    return `<a href="${processedUrl}" ${targetAttr} class="download-btn animate-text wait-animation ${type.toLowerCase()}" style="display:inline-block; padding:10px 20px; ${bgColor ? `background:${bgColor};` : ''} color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconMap[label.toLowerCase()] || 'fas fa-link'}"></i> ${label}</a>`;
                 });
             } else {
                 return original.replace(/img\{(.*?)\}/g, (m, content) => {
