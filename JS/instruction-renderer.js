@@ -263,17 +263,12 @@ function parseMarkdown(lines) {
                     if (!isExternal) {
                         targetAttr = '';
                         // Internal Link Logic (match Search Cards)
-                        // 1. Remove .json extension
                         processedUrl = processedUrl.replace(/\.json$/i, '');
-                        // 2. Ensure hash routing
                         if (!processedUrl.startsWith('#')) {
-                            // If it's a bare path like "software/app", make it "#/docs/software/app"
-                            // If it already has docs/, just ensure prefix
                             let cleanPath = processedUrl;
                             if (cleanPath.startsWith('docs/')) {
                                 cleanPath = cleanPath.substring(5);
                             }
-                            // Don't double slash
                             cleanPath = cleanPath.replace(/^\/+/, '');
                             processedUrl = '#/docs/' + cleanPath;
                         }
@@ -312,6 +307,23 @@ function parseMarkdown(lines) {
         const indentStyle = indentLevel > 0 ? `margin-left: ${indentPx}px;` : '';
 
         const trimmedLine = line.trim();
+
+        // 0.1 ALIGNMENT BLOCKS
+        // Start Block: ::: center/right/left/justify
+        const alignMatch = trimmedLine.match(/^:::\s*(center|right|left|justify|start|end)\s*$/i);
+        if (alignMatch) {
+            if (inList) { html += `</${listType}>\n`; inList = false; }
+            const align = alignMatch[1].toLowerCase();
+            // Handle logical values if needed, though CSS supports text-align: start/end
+            html += `<div class="align-block animate-text wait-animation" style="text-align: ${align}; width: 100%; margin-bottom: 10px;">`;
+            return;
+        }
+        // End Block: :::
+        if (trimmedLine === ':::') {
+            if (inList) { html += `</${listType}>\n`; inList = false; }
+            html += `</div>`;
+            return;
+        }
 
         // 1. LISTS
         const isUl = trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ');
