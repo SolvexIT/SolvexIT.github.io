@@ -209,13 +209,7 @@ function parseMarkdown(lines) {
     let inList = false;
     let listType = '';
 
-    const iconMap = {
-        'download': 'fas fa-download',
-        'source_thread': 'fas fa-external-link-alt',
-        'telegram': 'fab fa-telegram-plane',
-        'plugin': 'fas fa-plug',
-        'github': 'fab fa-github'
-    };
+    const iconMap = window.iconMap || {};
 
     const typeColorMap = {
         'default': '#238636',
@@ -247,13 +241,21 @@ function parseMarkdown(lines) {
                     if (content.includes('<') || content.includes('&lt;')) {
                         const tM = content.match(/(?:type|color)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
                         if (tM) type = tM[1].trim();
-                        const lM = content.match(/(?:label|text)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                        const lM = content.match(/(?:label|text|name)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
                         if (lM) label = lM[1].trim();
                         const uM = content.match(/(?:url|link)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
                         if (uM) url = uM[1].trim();
                     } else {
                         const parts = content.replace(/`/g, '').split('_');
-                        if (parts.length >= 3) { type = parts[0]; label = parts[1]; url = parts.slice(2).join('_'); }
+                        if (parts.length >= 3) { 
+                            type = parts[0]; 
+                            label = parts[1]; 
+                            url = parts.slice(2).join('_'); 
+                        } else if (parts.length === 2) {
+                            // Support label_url syntax (default type)
+                            label = parts[0];
+                            url = parts[1];
+                        }
                     }
                     
                     let processedUrl = url.replace(/&amp;/g, '&');
@@ -275,7 +277,9 @@ function parseMarkdown(lines) {
                     }
 
                     const bgColor = typeColorMap[type.toLowerCase()];
-                    return `<a href="${processedUrl}" ${targetAttr} class="download-btn animate-text wait-animation ${type.toLowerCase()}" style="display:inline-block; padding:10px 20px; ${bgColor ? `background:${bgColor};` : ''} color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconMap[label.toLowerCase()] || 'fas fa-link'}"></i> ${label}</a>`;
+                    // Use global iconMap. Check label first, then type.
+                    const iconClass = (iconMap[label.toLowerCase()] || iconMap[type.toLowerCase()]) || 'fas fa-link';
+                    return `<a href="${processedUrl}" ${targetAttr} class="download-btn animate-text wait-animation ${type.toLowerCase()}" style="display:inline-block; padding:10px 20px; ${bgColor ? `background:${bgColor};` : ''} color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconClass}"></i> ${label}</a>`;
                 });
             } else {
                 return original.replace(/img\{(.*?)\}/g, (m, content) => {
