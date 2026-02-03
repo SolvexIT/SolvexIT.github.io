@@ -823,6 +823,14 @@ window.handleAnchorClick = function(slug) {
     }
     
     scrollToAnchor(slug);
+
+    // CLEAN URL after 3 seconds
+    setTimeout(() => {
+        const cleanHash = '#' + basePath;
+        try {
+            history.replaceState(null, null, cleanHash);
+        } catch(e) {}
+    }, 3000);
 };
 
 function scrollToAnchor(id) {
