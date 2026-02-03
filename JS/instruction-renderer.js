@@ -72,18 +72,22 @@ window.renderInstructionContent = function(data, targetElementId, options = {}) 
     
     let headerHtml = '';
     if (parsedData.info) {
-            headerHtml = `<div class="instruction-header animate-text wait-animation">
-            <h1 class="instruction-title" style="color: #58A6FF;">${parsedData.info.title}</h1>
+        const info = parsedData.info;
+        headerHtml = `<div class="instruction-header animate-text wait-animation">
+            <h1 class="instruction-title" style="color: #58A6FF;">${info.title || ''}</h1>
             <div class="meta-info-container">
+                ${info.author ? `
                 <span class="meta-badge">
-                    <i class="fas fa-user meta-icon-user"></i> ${parsedData.info.author}
-                </span>
+                    <i class="fas fa-user meta-icon-user"></i> ${info.author}
+                </span>` : ''}
+                ${info.version ? `
                 <span class="meta-badge">
-                    <i class="fas fa-code-branch meta-icon-version"></i> v${parsedData.info.version}
-                </span>
+                    <i class="fas fa-code-branch meta-icon-version"></i> v${info.version}
+                </span>` : ''}
+                ${info.last_updated ? `
                 <span class="meta-badge">
-                    <i class="far fa-calendar-alt meta-icon-date"></i> ${parsedData.info.last_updated}
-                </span>
+                    <i class="far fa-calendar-alt meta-icon-date"></i> ${info.last_updated}
+                </span>` : ''}
             </div>
             </div>`;
     }
