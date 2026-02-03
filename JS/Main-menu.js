@@ -427,44 +427,11 @@ function handleScrollSpy(path) {
     const container = document.getElementById('instructionsContainer');
     if (!container) return;
 
-    // Save Position
+    // Save Position only. No URL update.
     if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
     scrollDebounceTimer = setTimeout(() => {
         saveScrollPosition(path);
-        updateActiveAnchorOnScroll(path);
     }, 150);
-}
-
-function updateActiveAnchorOnScroll(basePath) {
-    // Basic ScrollSpy: Find the header closest to the top
-    const headers = document.querySelectorAll('#instructionsContent h1, #instructionsContent h2, #instructionsContent h3');
-    const container = document.getElementById('instructionsContainer');
-    
-    if (!headers.length || !container) return;
-
-    let currentHeader = null;
-    const containerTop = container.scrollTop;
-    // Offset for header height/padding
-    const offset = 100; 
-
-    headers.forEach(header => {
-        if (header.offsetTop <= containerTop + offset) {
-            currentHeader = header;
-        }
-    });
-
-    if (currentHeader && currentHeader.id) {
-        const newHash = '#/docs/' + basePath + '#' + currentHeader.id;
-        // Only update if changed
-        if (window.location.hash !== newHash) {
-            isInternalRouteUpdate = true;
-            try {
-                history.replaceState(null, null, newHash);
-            } catch(e) {}
-            // Reset flag after a short delay
-            setTimeout(() => { isInternalRouteUpdate = false; }, 300);
-        }
-    }
 }
 
 function openInstruction(resourcePath, anchor = null) {
@@ -542,20 +509,34 @@ function openInstruction(resourcePath, anchor = null) {
         })
         .then(data => {
             if (window.renderInstructionContent) {
-                // If anchor is present, pass instant: true
-                // Also pass instant if restoring scroll, to avoid jumping content
-                const shouldBeInstant = !!anchor || sessionStorage.getItem('scrollPos_' + id) !== null;
+                // Determine if this is a RELOAD or explicit navigation
+                // If performance.navigation.type is 1 (RELOAD) or performance.getEntriesByType("navigation")[0].type === 'reload'
+                let isReload = false;
+                try {
+                     const nav = performance.getEntriesByType("navigation")[0];
+                     if (nav && nav.type === 'reload') isReload = true;
+                     else if (window.performance && window.performance.navigation.type === 1) isReload = true;
+                } catch(e) {}
+
+                // Check for saved scroll position
+                const savedPos = sessionStorage.getItem('scrollPos_' + id);
+                
+                // Prioritize saved position ONLY if it's a reload OR if no specific anchor was requested.
+                // If user clicks a link with anchor from menu, they expect to go to anchor.
+                const hasSavedPos = savedPos !== null;
+                const shouldUseSavedPos = hasSavedPos && (isReload || !anchor);
+
+                // Instant rendering if we have a target destination
+                const shouldBeInstant = !!anchor || shouldUseSavedPos;
                 
                 window.renderInstructionContent(data, 'instructionsContent', { instant: shouldBeInstant });
                 
-                // If anchor exists, scroll to it immediately
-                if (anchor) {
+                if (shouldUseSavedPos) {
+                    restoreScrollPosition(id);
+                } else if (anchor) {
                     setTimeout(() => {
                         scrollToAnchor(anchor);
                     }, 50); 
-                } else {
-                    // Restore position if no specific anchor requested
-                    restoreScrollPosition(id);
                 }
             } else {
                 throw new Error("Renderer not found");

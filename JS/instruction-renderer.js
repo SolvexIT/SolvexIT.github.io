@@ -144,9 +144,6 @@ window.copyAnchorLink = function(slug, btn) {
     };
 
     copyToClipboard(fullUrl).then(() => {
-        // Update URL silently
-        try { history.replaceState({}, '', fullUrl); } catch(e) {}
-        
         // Show Tooltip
         const tooltip = document.createElement('div');
         tooltip.className = 'anchor-tooltip';
