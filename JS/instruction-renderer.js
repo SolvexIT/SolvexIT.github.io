@@ -40,6 +40,18 @@ style.textContent = `
         80% { opacity: 1; transform: translateY(0); }
         100% { opacity: 0; transform: translateY(-5px); }
     }
+    /* Improve list item spacing and inline clearance */
+    #instructionsContent li {
+        line-height: 1.5;
+        margin-bottom: 6px;
+    }
+    #instructionsContent li code, #instructionsContent li mark {
+        margin: 0 2px;
+        padding: 2px 5px;
+        display: inline-block;
+        line-height: 1;
+        vertical-align: middle;
+    }
 `;
 document.head.appendChild(style);
 
