@@ -449,10 +449,25 @@ function processInlineMarkdown(text) {
             return `<a href="javascript:void(0)" onclick="handleAnchorClick('${slug}')" style="color: #58A6FF; text-decoration: underline; cursor: pointer;">${label}</a>`;
         })
         .replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
-            const isExternal = url.startsWith('http');
+            let processedUrl = url;
+            const isExternal = processedUrl.startsWith('http');
+            
+            if (!isExternal) {
+                // Internal Link Logic (consistent with buttons)
+                processedUrl = processedUrl.replace(/\.json$/i, '');
+                if (!processedUrl.startsWith('#')) {
+                    let cleanPath = processedUrl;
+                    if (cleanPath.startsWith('docs/')) {
+                        cleanPath = cleanPath.substring(5);
+                    }
+                    cleanPath = cleanPath.replace(/^\/+/, '');
+                    processedUrl = '#/docs/' + cleanPath;
+                }
+            }
+
             // Beautiful numbering for internal links
             if (!isExternal && /^\d+$/.test(text)) {
-                 return `<a href="${url}" class="number-badge" style="
+                 return `<a href="${processedUrl}" class="number-badge" style="
                     display: inline-block;
                     min-width: 20px;
                     padding: 0 6px;
@@ -466,6 +481,6 @@ function processInlineMarkdown(text) {
                     transition: all 0.2s;
                 " onmouseover="this.style.background='#58A6FF'; this.style.color='white'" onmouseout="this.style.background='transparent'; this.style.color='#58A6FF'">${text}</a>`;
             }
-            return `<a href="${url}"${isExternal ? ' target="_blank"' : ''} style="color: #58A6FF; text-decoration: underline;">${text}</a>`;
+            return `<a href="${processedUrl}"${isExternal ? ' target="_blank"' : ''} style="color: #58A6FF; text-decoration: underline;">${text}</a>`;
         });
 }
