@@ -258,7 +258,7 @@ body.search-mode, body.view-mode {
         height: 30px; /* Compact */
         background: rgba(30, 40, 60, 0.6); /* Transparent */
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
+        border-radius: 0;
         box-shadow: none;
         z-index: 85;
         margin: 0;
