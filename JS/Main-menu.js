@@ -509,34 +509,34 @@ function openInstruction(resourcePath, anchor = null) {
         })
         .then(data => {
             if (window.renderInstructionContent) {
-                // Determine if this is a RELOAD or explicit navigation
-                // If performance.navigation.type is 1 (RELOAD) or performance.getEntriesByType("navigation")[0].type === 'reload'
-                let isReload = false;
-                try {
-                     const nav = performance.getEntriesByType("navigation")[0];
-                     if (nav && nav.type === 'reload') isReload = true;
-                     else if (window.performance && window.performance.navigation.type === 1) isReload = true;
-                } catch(e) {}
-
                 // Check for saved scroll position
                 const savedPos = sessionStorage.getItem('scrollPos_' + id);
-                
-                // Prioritize saved position ONLY if it's a reload OR if no specific anchor was requested.
-                // If user clicks a link with anchor from menu, they expect to go to anchor.
                 const hasSavedPos = savedPos !== null;
-                const shouldUseSavedPos = hasSavedPos && (isReload || !anchor);
 
-                // Instant rendering if we have a target destination
-                const shouldBeInstant = !!anchor || shouldUseSavedPos;
-                
+                // Force instant rendering if we have an anchor OR saved data
+                // This prevents animation on reload
+                const shouldBeInstant = !!anchor || hasSavedPos;
+
                 window.renderInstructionContent(data, 'instructionsContent', { instant: shouldBeInstant });
                 
-                if (shouldUseSavedPos) {
-                    restoreScrollPosition(id);
-                } else if (anchor) {
+                if (anchor) {
+                    // 1. Scroll to Anchor
                     setTimeout(() => {
                         scrollToAnchor(anchor);
+                        
+                        // 2. CLEAN URL after 3 seconds
+                        // Remove anchor from URL so reloads don't stuck here
+                        setTimeout(() => {
+                            const cleanHash = '#/docs/' + id;
+                            try {
+                                history.replaceState(null, null, cleanHash);
+                            } catch(e) {}
+                        }, 3000);
+
                     }, 50); 
+                } else if (hasSavedPos) {
+                    // 3. Restore Session Position (Reload case)
+                    restoreScrollPosition(id);
                 }
             } else {
                 throw new Error("Renderer not found");
