@@ -858,9 +858,8 @@ function scrollToAnchor(id) {
 
             // Optional: flash highlight
             el.style.transition = 'background 0.5s';
-            const originalBg = el.style.background;
-            el.style.background = 'rgba(88, 166, 255, 0.2)';
-            setTimeout(() => { el.style.background = originalBg; }, 1000);
+            el.style.backgroundColor = 'rgba(88, 166, 255, 0.2)';
+            setTimeout(() => { el.style.backgroundColor = ''; }, 2000);
         } else if (count > 0) {
             setTimeout(() => attemptScroll(count - 1), 200);
         }
