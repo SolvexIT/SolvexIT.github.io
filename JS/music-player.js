@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 2. Restore Time
-    const savedTime = localStorage.getItem(TIME_KEY); // Changed to localStorage for cross-session resume
+    const savedTime = sessionStorage.getItem(TIME_KEY); // Changed to sessionStorage for per-session resume
     if (savedTime) {
         bgMusic.currentTime = parseFloat(savedTime);
     }
@@ -166,13 +166,13 @@ document.addEventListener('DOMContentLoaded', () => {
     bgMusic.addEventListener('timeupdate', () => {
         // Save every second roughly to avoid thrashing, or just on unload
         if (Math.floor(bgMusic.currentTime) % 5 === 0) {
-            localStorage.setItem(TIME_KEY, bgMusic.currentTime);
+            sessionStorage.setItem(TIME_KEY, bgMusic.currentTime);
         }
     });
     
     // Save on pause/unload
     window.addEventListener('beforeunload', () => {
-        localStorage.setItem(TIME_KEY, bgMusic.currentTime);
+        sessionStorage.setItem(TIME_KEY, bgMusic.currentTime);
     });
 
     bgMusic.addEventListener('ended', () => {
