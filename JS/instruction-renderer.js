@@ -15,7 +15,8 @@ style.textContent = `
         transition: opacity 0.2s, transform 0.2s;
         padding: 5px;
     }
-    h1:hover .anchor-btn, h2:hover .anchor-btn, h3:hover .anchor-btn {
+    h1:hover .anchor-btn, h2:hover .anchor-btn, h3:hover .anchor-btn,
+    h4:hover .anchor-btn, h5:hover .anchor-btn, h6:hover .anchor-btn {
         opacity: 1;
     }
     .anchor-btn:hover {
@@ -369,7 +370,17 @@ function parseMarkdown(lines) {
             const mid = processInlineMarkdown(pre.text);
             const final = restoreMedia(mid, pre.placeholders, ''); // No extra indent inside LI
             
-            html += `<li style="margin-bottom: 5px; ${indentStyle}">${final}</li>\n`;
+            // Check for block ID inside list content
+            let liIdAttr = '';
+            const idMatch = final.match(/\s+\^([a-zA-Z0-9-]+)\s*$/);
+            let cleanedFinal = final;
+            if (idMatch) {
+                liIdAttr = ` id="${idMatch[1]}"`;
+                // Remove the ID marker from the display text
+                cleanedFinal = final.replace(/\s+\^([a-zA-Z0-9-]+)\s*$/, '');
+            }
+            
+            html += `<li${liIdAttr} style="margin-bottom: 5px; ${indentStyle}">${cleanedFinal}</li>\n`;
             return;
         } else if (inList) {
             html += `</${listType}>\n`;
@@ -407,7 +418,22 @@ function parseMarkdown(lines) {
         let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
         // Headers
-        if (processedLine.startsWith('### ')) {
+        if (processedLine.startsWith('###### ')) {
+            const text = processedLine.substring(7);
+            const slug = slugify(text);
+            processedLine = `<h6 id="${slug}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}<button class="anchor-btn" onclick="copyAnchorLink('${slug}', this)" title="Копировать ссылку"><i class="fas fa-link"></i></button></h6>`;
+        }
+        else if (processedLine.startsWith('##### ')) {
+            const text = processedLine.substring(6);
+            const slug = slugify(text);
+            processedLine = `<h5 id="${slug}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}<button class="anchor-btn" onclick="copyAnchorLink('${slug}', this)" title="Копировать ссылку"><i class="fas fa-link"></i></button></h5>`;
+        }
+        else if (processedLine.startsWith('#### ')) {
+            const text = processedLine.substring(5);
+            const slug = slugify(text);
+            processedLine = `<h4 id="${slug}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}<button class="anchor-btn" onclick="copyAnchorLink('${slug}', this)" title="Копировать ссылку"><i class="fas fa-link"></i></button></h4>`;
+        }
+        else if (processedLine.startsWith('### ')) {
             const text = processedLine.substring(4);
             const slug = slugify(text);
             processedLine = `<h3 id="${slug}" class="animate-text wait-animation" style="color: #58A6FF; ${indentStyle}">${text}<button class="anchor-btn" onclick="copyAnchorLink('${slug}', this)" title="Копировать ссылку"><i class="fas fa-link"></i></button></h3>`;
@@ -432,12 +458,35 @@ function parseMarkdown(lines) {
         const pre = preprocessMedia(processedLine);
         processedLine = pre.text;
 
+        // Check for Obsidian block ID at the end of the line: ^id123
+        let blockId = '';
+        const blockIdMatch = processedLine.match(/\s+\^([a-zA-Z0-9-]+)\s*$/);
+        if (blockIdMatch) {
+            blockId = blockIdMatch[1];
+            processedLine = processedLine.replace(/\s+\^([a-zA-Z0-9-]+)\s*$/, '');
+        }
+        const idAttr = blockId ? ` id="${blockId}"` : '';
+
         // Process MD inside tags or paragraphs
         if (processedLine.startsWith('<h') || processedLine.startsWith('<blockquote')) {
+            // Inject ID into existing tag if present
+            if (blockId) {
+                processedLine = processedLine.replace(/^<([a-z0-9]+)/i, `<$1${idAttr}`);
+            }
             processedLine = processedLine.replace(/>(.*?)<\//, (m, inner) => `>${processInlineMarkdown(inner)}</`); 
         } else if (!processedLine.startsWith('<')) {
             processedLine = processInlineMarkdown(processedLine);
-            processedLine = (trimmedLine === '') ? '<br>' : `<p class="animate-text wait-animation" style="${indentStyle}">${processedLine}</p>`;
+            // Handle lists specifically in the list block above, but for paragraphs:
+            if (!inList) {
+                processedLine = (trimmedLine === '') ? '<br>' : `<p${idAttr} class="animate-text wait-animation" style="${indentStyle}">${processedLine}</p>`;
+            } else {
+                 // If inside a list, we need to inject the ID into the LI that is being built.
+                 // The LI is constructed earlier in step 1. We can't easily retroactively add it there without refactoring.
+                 // Instead, we wrap the content in a span with the ID.
+                 if (blockId) {
+                     processedLine = `<span${idAttr}>${processedLine}</span>`;
+                 }
+            }
         }
 
         // RESTORE placeholders
@@ -459,7 +508,7 @@ function processInlineMarkdown(text) {
         .replace(/__(.*?)__/g, '<u>$1</u>')
         .replace(/~~(.*?)~~/g, '<del>$1</del>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\[\[#([^|\]]+)\|?(.*?)\]\]/g, (match, anchor, text) => {
+        .replace(/\[\[#\^?([^|\]]+)\|?(.*?)\]\]/g, (match, anchor, text) => {
             const label = text || anchor;
             const slug = anchor.toLowerCase().trim().replace(/[^\w\u0400-\u04FF\s-]/g, '').replace(/\s+/g, '-');
             return `<a href="javascript:void(0)" onclick="handleAnchorClick('${slug}')" style="color: #58A6FF; text-decoration: underline; cursor: pointer;">${label}</a>`;
