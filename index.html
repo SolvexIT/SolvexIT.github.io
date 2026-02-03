@@ -3,13 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Главная</title>
+    <title>SolvexIT SPA</title>
     <link rel="stylesheet" href="CSS/style.css">
     <link rel="stylesheet" href="CSS/Main-menu.css">
+    <link rel="stylesheet" href="CSS/search.css"> <!-- Added search styles -->
+    <link rel="stylesheet" href="CSS/spa-transitions.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="bg-animation"></div>
+
+    <!-- Header Components (Hidden Initially) -->
+    <div class="site-header-bg" id="headerBg"></div>
+    <div class="header-content" id="headerContent">
+        <div class="random-fact" id="randomFact">Загрузка...</div>
+        <div class="header-search">
+            <div class="search-input-wrapper">
+                <input type="text" id="searchInput" placeholder="Поиск...">
+                <button class="search-icon-btn tag-toggle-btn" id="toggleTagsBtn" title="Теги"><i class="fas fa-tags"></i></button>
+                <button class="search-icon-btn clear-search-btn" id="clearSearchBtn" title="Очистить"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="tag-filters"></div>
+        </div>
+    </div>
+
+    <!-- Search Results Container (Hidden Initially) -->
+    <div id="searchResultsContainer" class="search-results-wrapper">
+        <div id="results-area"></div>
+    </div>
+
+    <!-- Instructions Container (Future Use) -->
+    <div id="instructionsContainer" class="search-results-wrapper">
+        <div id="instructionsContent">Здесь будет контент инструкций...</div>
+    </div>
 
     <div class="hero-container">
         <div class="orbit-menu" id="orbitMenu">
@@ -20,6 +46,37 @@
         </div>
     </div>
 
+    <!-- Music Player -->
+    <div class="music-player" id="musicPlayer">
+        
+        <!-- Volume Slider (Pops out to the left of the volume button) -->
+        <div class="vol-slider-wrapper" id="volSliderWrapper">
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.1">
+        </div>
+
+        <!-- Pop-out Actions (Hidden by default) -->
+        <div class="fab-actions" id="fabActions">
+            <button class="action-btn" id="btnVol" title="Громкость">
+                <i class="fas fa-volume-up"></i>
+            </button>
+            <button class="action-btn" id="btnPlay" title="Старт/Стоп">
+                <i class="fas fa-play"></i>
+            </button>
+        </div>
+
+        <!-- Main Trigger Button -->
+        <button class="main-music-btn" id="mainMusicBtn">
+            <i class="fas fa-music"></i>
+        </button>
+
+        <audio id="bgMusic" loop>
+            <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+        </audio>
+    </div>
+
+    <script src="JS/icons.js"></script>
+    <script src="JS/instruction-renderer.js"></script>
     <script src="JS/Main-menu.js"></script>
+    <script src="JS/music-player.js"></script>
 </body>
 </html>

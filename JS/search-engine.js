@@ -5,29 +5,59 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let db = []; // База данных
     let selectedTags = new Set(); // Выбранные теги
+    let updateTagsUI_External; // Внешняя ссылка на функцию обновления UI тегов
     
     // ПЕРЕМЕННЫЕ ДЛЯ ОПТИМИЗАЦИИ (Кнопка "Ещё")
     let currentFilteredItems = []; // Текущий список найденного
     let itemsToShow = 5; // Сколько показывать сразу
     const loadMoreStep = 10; // Сколько добавлять при нажатии кнопки
 
-    // 1. Загружаем данные по ссылке
-    const databaseUrl = 'https://gist.githubusercontent.com/SolvexIT/6c9d9ebc89835f8812cfb66d18268324/raw';
+    const databaseUrlBase = 'https://gist.githubusercontent.com/SolvexIT/6c9d9ebc89835f8812cfb66d18268324/raw';
 
-    fetch(databaseUrl)
-        .then(response => {
-            if (!response.ok) throw new Error('Ошибка сети');
-            return response.json();
-        })
-        .then(data => {
-            db = data;
-            createTagFilters(db);
-            filterAndRender(false); // Показываем первые itemsToShow при старте
-        })
-        .catch(error => {
-            console.error('Ошибка:', error);
-            resultsArea.innerHTML = '<div class="no-results">Ошибка загрузки базы. Проверьте интернет.</div>';
-        });
+    // --- ФУНКЦИЯ ЗАГРУЗКИ ДАННЫХ (С автообновлением) ---
+    function loadDatabase(isInitialLoad = false) {
+        // Cache Busting: добавляем время к URL, чтобы не брать из кэша
+        const timestamp = new Date().getTime();
+        const urlWithCacheBuster = `${databaseUrlBase}?t=${timestamp}`;
+
+        fetch(urlWithCacheBuster)
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка сети');
+                return response.json();
+            })
+            .then(data => {
+                const oldDbJson = JSON.stringify(db);
+                const newDbJson = JSON.stringify(data);
+                
+                // Обновляем только если данные реально изменились
+                if (oldDbJson !== newDbJson) {
+                    db = data;
+                    if (isInitialLoad) {
+                        createTagFilters(db);
+                        filterAndRender(true); // Полный рендер при старте
+                    } else {
+                        // Тихое обновление: сохраняем текущее положение и фильтры
+                        // Если тегов стало больше, фильтр обновится при следующем поиске или клике
+                        console.log('Database updated automatically at ' + new Date().toLocaleTimeString());
+                        filterAndRender(false); // false = не сбрасывать itemsToShow, чтобы не дергать список
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки:', error);
+                if (isInitialLoad) {
+                    resultsArea.innerHTML = '<div class="no-results">Ошибка загрузки базы. Проверьте интернет.</div>';
+                }
+            });
+    }
+
+    // 1. Первая загрузка
+    loadDatabase(true);
+
+    // 2. Автообновление каждые 60 секунд (60000 мс)
+    setInterval(() => {
+        loadDatabase(false);
+    }, 60000);
 
     // --- ОПТИМИЗАЦИЯ: DEBOUNCE (Задержка поиска) ---
     function debounce(func, wait) {
@@ -40,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Слушаем ввод (задержка 300мс перед поиском)
     searchInput.addEventListener('input', debounce(() => {
-        filterAndRender();
+        filterAndRender(true); // При вводе сбрасываем пагинацию
     }, 300));
 
     // --- ГЛАВНАЯ ФУНКЦИЯ ФИЛЬТРАЦИИ ---
@@ -90,24 +120,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemsToRender = currentFilteredItems.slice(0, itemsToShow);
 
         itemsToRender.forEach(item => {
-            const card = document.createElement('a');
+            const card = document.createElement('div');
             card.className = 'result-card';
-            card.href = item.link;
-            if(item.link.startsWith('http')) card.target = "_blank";
-
+            
             // Красивые теги внутри карточки
             const tagsHtml = item.tags.split(',').map(tag => `<span class="tag_container">#${tag.trim()}</span>`).join(' ');
 
             card.innerHTML = `
-                <span class="result-title">${item.name}</span>
-                <span class="result-link">${item.link}</span>
-                <div class="result-description">${item.description || ''}</div>
+                <a href="${item.link}" ${item.link.startsWith('http') ? 'target="_blank"' : ''} style="text-decoration: none; color: inherit; display: block;">
+                    <span class="result-title">${item.name}</span>
+                    <span class="result-link">${item.link}</span>
+                    <div class="result-description">${item.description || ''}</div>
+                </a>
                 <div class="result-tags">${tagsHtml}</div>
             `;
             
             // Анимацию можно оставить, если карточек немного
             card.style.animation = "fadeIn 0.5s ease";
             resultsArea.appendChild(card);
+
+            // Добавляем обработчик клика на теги внутри карточки
+            card.querySelectorAll('.result-tags .tag_container').forEach(tagEl => {
+                tagEl.addEventListener('click', (e) => {
+                    // e.preventDefault() не нужен, так как это span
+                    const tag = tagEl.textContent.replace('#', '').trim();
+                    selectedTags.add(tag);
+                    if (updateTagsUI_External) updateTagsUI_External();
+                });
+            });
         });
 
         // --- МАГИЯ КНОПКИ "ПОКАЗАТЬ ЕЩЁ" ---
@@ -207,8 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
         function updateTagsUI() {
             renderSelectedTags();
             renderAvailableTags(tagSearchInput.value);
-            filterAndRender(); // <-- Самое важное: запускаем поиск
+            filterAndRender(true); // <-- Сбрасываем пагинацию при смене тегов
         }
+        updateTagsUI_External = updateTagsUI;
 
         tagSearchInput.addEventListener('input', (e) => {
             renderAvailableTags(e.target.value);

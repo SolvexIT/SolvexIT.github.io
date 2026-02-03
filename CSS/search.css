@@ -16,7 +16,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow-y: auto; /* Разрешаем вертикальную прокрутку */
+    overflow-x: hidden; /* Prevent body horizontal scroll */
 }
 
 /* --- СТРАНИЦА ПОИСКА --- */
@@ -33,7 +33,7 @@ body {
 .search-header { 
     display: flex;
     align-items: center;
-    justify-content: space-between; /* Распределяем пространство */
+    justify-content: space-between; 
     margin-bottom: 40px;
     position: relative;
 }
@@ -49,7 +49,7 @@ body {
     font-size: 16px;
     padding: 10px 20px;
     border-radius: 30px;
-    background: rgba(255, 255, 255, 0.05); /* Полупрозрачный фон */
+    background: rgba(255, 255, 255, 0.05); 
     transition: all 0.3s var(--anim-curve);
     border: 1px solid transparent;
 }
@@ -59,7 +59,6 @@ body {
     transition: transform 0.3s ease;
 }
 
-/* Ховер: Подсветка и движение стрелки */
 .back-nav-btn:hover {
     color: white;
     background: rgba(255, 255, 255, 0.1);
@@ -67,19 +66,17 @@ body {
 }
 
 .back-nav-btn:hover .arrow {
-    transform: translateX(-5px); /* Стрелка едет влево */
+    transform: translateX(-5px);
 }
 
-/* --- АНИМАЦИЯ СВАЙПА ПРИ НАЖАТИИ --- */
 .back-nav-btn.swipe-out {
-    transform: translateX(-50px); /* Улетает влево */
-    opacity: 0; /* И исчезает */
+    transform: translateX(-50px);
+    opacity: 0; 
     pointer-events: none;
 }
 
 /* --- Логотип --- */
 .logo-wrapper {
-    /* Абсолютное центрирование логотипа, чтобы кнопка слева его не сдвигала */
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
@@ -138,6 +135,20 @@ body {
 
 .available-tags {
     margin-bottom: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) #1e1e1e;
+}
+
+.available-tags::-webkit-scrollbar {
+    width: 6px;
+}
+.available-tags::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+.available-tags::-webkit-scrollbar-thumb {
+    background-color: var(--accent);
+    border-radius: 4px;
 }
 
 .available-tag {
@@ -180,6 +191,7 @@ body {
     flex-direction: column;
     gap: 15px;
     text-align: left;
+    max-width: 100%; /* Safety */
 }
 
 .result-card {
@@ -190,7 +202,8 @@ body {
     transition: 0.2s;
     border: 1px solid transparent;
     display: block;
-    animation: fadeIn 0.5s ease; /* Плавное появление списка */
+    animation: fadeIn 0.5s ease;
+    word-wrap: break-word; /* Prevent long links from breaking layout */
 }
 
 @keyframes fadeIn {
@@ -246,19 +259,31 @@ body {
 }
 
 .tag_container {
-    padding: 2px 5px;
-    margin: 0 2px;
+    padding: 5px 12px;
+    margin: 4px 4px 0 0;
     text-decoration: none;
-    background: #504945;
-    border-radius: 10%;
-    color: #6AAA7C;
-    margin-top: 4px;
+    background: rgba(0, 145, 217, 0.15); 
+    border: 1px solid rgba(0, 145, 217, 0.3);
+    border-radius: 20px; 
+    color: #58A6FF;
+    display: inline-block;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.tag_container:hover {
+    background: rgba(0, 145, 217, 0.4);
+    box-shadow: 0 0 10px rgba(0, 145, 217, 0.4);
+    transform: translateY(-1px);
+    color: white;
 }
 
 /* --- КНОПКА "ПОКАЗАТЬ ЕЩЁ" --- */
 .load-more-btn {
     display: block;
-    margin: 30px auto; /* Центрируем */
+    margin: 30px auto; 
     padding: 12px 40px;
     font-size: 16px;
     font-family: inherit;
@@ -272,7 +297,7 @@ body {
 
 .load-more-btn:hover {
     color: white;
-    background: var(--accent); /* Синий цвет */
+    background: var(--accent); 
     border-color: var(--accent);
     box-shadow: 0 0 20px rgba(0, 136, 204, 0.4);
     transform: translateY(-2px);
@@ -280,4 +305,261 @@ body {
 
 .load-more-btn:active {
     transform: scale(0.95);
+}
+
+/* --- АДАПТАЦИЯ ИНСТРУКЦИЙ (ФИКС) --- */
+#instructionsContainer {
+    width: 100%;
+    max-width: 100%; /* Full width */
+    overflow-wrap: break-word; /* Break long words */
+    word-wrap: break-word; /* Legacy support */
+    hyphens: auto; /* Hyphenation */
+}
+
+#instructionsContent {
+    width: 100%;
+    /* Ensure content doesn't overflow parent */
+    max-width: 100%; 
+}
+
+#instructionsContainer h1, 
+#instructionsContainer h2, 
+#instructionsContainer h3 {
+    color: #e0e0e0;
+    max-width: 100%;
+}
+
+#instructionsContainer h1 { font-size: 2rem; line-height: 1.2; }
+#instructionsContainer h2 { font-size: 1.5rem; margin-top: 1.5em; margin-bottom: 0.5em; }
+#instructionsContainer h3 { font-size: 1.2rem; margin-top: 1.2em; }
+
+#instructionsContainer p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1em;
+    color: #ccc;
+    max-width: 100%;
+}
+
+#instructionsContainer img {
+    max-width: 100%; /* Strict image containment */
+    height: auto;
+    border-radius: 8px;
+    margin: 10px 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: inline-block; /* Fix for text-align positioning */
+}
+
+/* Code Blocks - Scrollable */
+#instructionsContainer pre {
+    background: #111;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border: 1px solid #333;
+    
+    /* Critical for mobile */
+    overflow-x: auto; 
+    white-space: pre; /* Keep code formatting but allow scroll */
+    max-width: 100%;
+}
+
+#instructionsContainer code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: #ff9f43;
+}
+
+/* Blockquotes */
+#instructionsContainer blockquote {
+    border-left: 4px solid var(--accent);
+    background: rgba(0, 145, 217, 0.1);
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    max-width: 100%;
+}
+
+/* Links inside instructions */
+#instructionsContainer a {
+    word-break: break-all; /* Break long links */
+}
+
+/* --- CODE BLOCKS UI --- */
+.code-block-wrapper {
+    position: relative;
+    margin: 20px 0;
+    border-radius: 8px;
+    background: #111;
+    border: 1px solid #333;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1a1a1a;
+    padding: 8px 15px;
+    border-bottom: 1px solid #333;
+}
+
+.code-lang {
+    color: #888;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.copy-code-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.copy-code-btn:hover {
+    background: #333;
+    color: white;
+    border-color: #666;
+}
+
+.copy-code-btn.copied {
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+/* Override default pre style inside wrapper */
+.code-block-wrapper pre {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+/* --- INSTRUCTION HEADER STYLES --- */
+.instruction-header {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    text-align: center;
+    position: relative;
+}
+
+/* Full width line after header */
+.instruction-header::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%; /* Matches container width */
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15); 
+    pointer-events: none;
+    z-index: 10;
+}
+
+.instruction-title {
+    color: #58A6FF;
+    margin-bottom: 15px;
+    font-size: 2em;
+    text-shadow: 0 0 15px rgba(88, 166, 255, 0.4), 0 0 30px rgba(88, 166, 255, 0.2); /* Enhanced Glow */
+    line-height: 1.2;
+}
+
+/* Staggered Animation Control */
+.animate-text.wait-animation {
+    animation: none !important;
+    opacity: 0 !important;
+}
+
+.meta-info-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.9em;
+    color: #ccc;
+}
+
+.meta-badge {
+    background: rgba(255, 255, 255, 0.06);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.meta-badge:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.meta-icon-user { color: #58A6FF; }
+.meta-icon-version { color: #238636; }
+.meta-icon-date { color: #d29922; }
+
+/* Mobile Specific Tweaks */
+@media (max-width: 768px) {
+    .search-results-wrapper {
+        padding: 15px 10px; /* Reduce side padding */
+        width: 100vw; /* Full viewport width */
+        overflow-x: hidden; /* Force hide overflow */
+    }
+    
+    #instructionsContainer {
+        padding: 0 5px; /* Tiny internal padding */
+    }
+
+    /* Instruction Header on Mobile */
+    .instruction-header {
+        text-align: center;
+        padding-right: 0;
+    }
+
+    .instruction-header h1 {
+        font-size: 1.6rem;
+        word-break: break-word; /* Ensure title breaks */
+    }
+
+    .meta-info-container {
+        display: flex;
+        flex-direction: row; /* Keep row direction but wrap */
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .meta-badge {
+        font-size: 0.8rem;
+        padding: 4px 10px;
+    }
+
+    /* Adjust Card Styles */
+    .result-card {
+        padding: 15px;
+    }
+
+    .result-title {
+        font-size: 18px;
+    }
+
+    /* Code blocks adjustments */
+    #instructionsContainer pre {
+        padding: 10px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+    }
 }

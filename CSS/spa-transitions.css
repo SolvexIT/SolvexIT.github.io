@@ -1,0 +1,315 @@
+/* Header Background - Dark Theme */
+.site-header-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    background: #0a192f; /* Dark Blue Theme */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateY(-100%);
+    transition: transform 0.5s ease, opacity 0.5s ease;
+    z-index: 90; 
+}
+
+.site-header-bg.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Header Content Container */
+.header-content {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    padding-left: 80px; 
+    padding-right: 20px;
+    z-index: 95;
+    pointer-events: none; 
+    transition: padding-left 0.3s ease; /* Smooth transition for padding change */
+}
+
+/* Added padding when back button is present */
+.header-content.has-back-btn {
+    padding-left: 140px; /* Increased from 80px to accommodate back button */
+}
+
+/* Random Fact (Desktop Style) */
+.random-fact {
+    flex-grow: 1;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #58A6FF;
+    text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+    text-align: center;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    margin: 0 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    /* Removed ellipsis to allow marquee if we want */
+    /* text-overflow: ellipsis; */ 
+    position: relative;
+    
+    /* Fade edges for smoother scrolling/appearance */
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* Desktop Marquee for long text */
+.random-fact span {
+    display: inline-block;
+    padding-left: 0;
+}
+/* If we want scrolling on desktop too for long text, we can add a class via JS */
+.random-fact.scroll-active span {
+    padding-left: 100%;
+    animation: marquee 20s linear infinite;
+}
+
+/* Search Box Container */
+.header-search {
+    flex-shrink: 0;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; 
+    position: relative;
+    z-index: 100; /* Ensure above facts */
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.header-search input {
+    padding: 10px 70px 10px 20px; /* Space for buttons */
+    border-radius: 25px;
+    border: 1px solid #333;
+    background: #1e1e1e;
+    color: white;
+    outline: none;
+    width: 300px;
+    transition: all 0.3s;
+    z-index: 2;
+}
+
+.header-search input:focus {
+    border-color: #0091D9;
+    box-shadow: 0 0 10px rgba(0, 145, 217, 0.2);
+}
+
+/* Icons inside search input */
+.search-icon-btn {
+    position: absolute;
+    right: 10px;
+    color: #888;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 14px;
+    padding: 5px;
+    transition: color 0.2s;
+    z-index: 3;
+}
+.search-icon-btn:hover { color: white; }
+
+.tag-toggle-btn {
+    right: 35px; /* Left of clear button */
+}
+
+/* Tag Filters Window */
+#tag-filters {
+    position: absolute;
+    top: 100%; /* Below input */
+    right: 0;
+    width: 300px; 
+    margin-top: 10px;
+    background: rgba(15, 25, 40, 0.98); /* Less transparent */
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(88, 166, 255, 0.2);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+    display: none; 
+    z-index: 101; /* Above everything including notifications */
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+#tag-filters.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Clear Tags Button */
+.clear-tags-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 5px;
+    background: #331010;
+    color: #ff6b6b;
+    border: 1px solid #552020;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.clear-tags-btn:hover { background: #552020; }
+
+/* Header Active State */
+.header-content.active {
+    pointer-events: auto;
+}
+.header-content.active .random-fact {
+    opacity: 1;
+    transform: translateY(0);
+}
+.header-content.active .header-search {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Animation Classes for Logo */
+.logo-transitioning {
+    position: fixed !important;
+    transition: all 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) !important;
+    margin: 0 !important;
+    z-index: 1000 !important;
+}
+
+/* Phase 1: Move Up */
+.logo-phase-1 {
+    top: 15px !important;
+    left: 50% !important;
+    transform: translateX(-50%) scale(0.8) !important;
+}
+
+/* Phase 3: Move Left (Final Position) */
+.logo-phase-3 {
+    top: 40px !important; 
+    left: 40px !important; 
+    transform: translate(-50%, -50%) scale(0.66) !important; 
+    box-shadow: none !important; 
+    background: transparent !important; 
+    border: none !important;
+    cursor: pointer !important; 
+}
+
+/* Search Results Container */
+.search-results-wrapper {
+    position: absolute;
+    top: 100px;
+    left: 0;
+    width: 100%;
+    min-height: calc(100vh - 100px);
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden; /* Ensure it doesn't cause overflow */
+    pointer-events: none;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.search-results-wrapper.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+body.search-mode, body.view-mode {
+    overflow-y: auto !important;
+}
+
+/* --- MOBILE STYLES --- */
+@media (max-width: 768px) {
+    .header-content {
+        padding-left: 60px; 
+        padding-right: 10px;
+        justify-content: flex-end;
+    }
+    
+    .header-content.has-back-btn {
+        padding-left: 100px; /* Adjusted for mobile */
+    }
+
+    /* Mobile Notification (Compact & Transparent) */
+    .random-fact {
+        position: fixed;
+        top: 90px;
+        left: 50%;
+        transform: translateX(-50%) !important; 
+        width: 80%; /* Compact */
+        height: 30px; /* Compact */
+        background: rgba(30, 40, 60, 0.6); /* Transparent */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0;
+        box-shadow: none;
+        z-index: 85;
+        margin: 0;
+        
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        white-space: nowrap;
+        
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.8);
+        text-shadow: none;
+
+        /* Fade edges for smoother scrolling/appearance */
+        mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+
+        /* Blurring the background */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    .random-fact span {
+        display: inline-block;
+        padding-left: 100%;
+        animation: marquee 10s linear infinite;
+    }
+
+    .header-search {
+        width: auto;
+        margin-right: 0;
+    }
+    
+    .header-search input {
+        width: 160px;
+    }
+
+    .logo-phase-3 {
+        left: 30px !important; 
+    }
+
+    /* Prevent content overlap with fixed notification */
+    .search-results-wrapper {
+        top: 135px;
+        min-height: calc(100vh - 135px);
+    }
+}
+
+@keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+}
+
+/* Music player styles removed from here to avoid conflicts with style.css */

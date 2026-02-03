@@ -1,37 +1,18 @@
 /* ================= НАСТРОЙКИ МЕНЮ ================= */
-// Здесь ты добавляешь свои кнопки.
-// type: 'link' (ссылка) или 'folder' (папка с иконками)
-// icon: путь к картинке ИЛИ класс иконки FontAwesome (например 'fas fa-search')
-// href: ссылка (только для type: 'link')
-// items: массив вложенных кнопок (только для type: 'folder')
-
 const menuConfig = [
-    { 
-        id: 'search', 
-        type: 'link', 
-        icon: 'fas fa-search', // Использую иконочный шрифт, но можно 'img/search.png'
-        href: 'search.html',
+    {
+        id: 'search',
+        type: 'action',
+        icon: 'fas fa-search',
         label: 'Поиск'
     },
-    { 
-        id: 'telegram', 
-        type: 'link', 
-        icon: 'fab fa-telegram-plane', 
+    {
+        id: 'telegram',
+        type: 'link',
+        icon: 'fab fa-telegram-plane',
         href: 'https://t.me/SolvexIT_public_links',
         label: 'Telegram'
     },
-/*    { 
-        id: 'tools', 
-        type: 'folder', // ЭТО ПАПКА! При нажатии откроются новые иконки
-        icon: 'fas fa-tools', 
-        label: 'Инструменты',
-        items: [
-            { type: 'link', icon: 'fas fa-wifi', href: '#', label: 'Wi-Fi' },
-            { type: 'link', icon: 'fas fa-server', href: '#', label: 'Server' },
-            { type: 'link', icon: 'fas fa-code', href: '#', label: 'Code' },
-            { type: 'link', icon: 'fas fa-terminal', href: '#', label: 'Term' }
-        ]
-    }, Пока не нужно|проверка*/
     {
         id: 'info',
         type: 'link',
@@ -41,97 +22,138 @@ const menuConfig = [
     }
 ];
 
-/* ================= ЛОГИКА (НЕ ТРОГАТЬ, ЕСЛИ НЕ ЗНАЕШЬ) ================= */
+/* ================= ЛОГИКА ================= */
 
 const orbitMenu = document.getElementById('orbitMenu');
 const ringArea = document.getElementById('ringArea');
 const mainToggle = document.getElementById('mainToggle');
 const mainLogoImg = document.getElementById('mainLogoImg');
-const originalLogoSrc = mainLogoImg.src; // Запоминаем изначальный логотип
+
+// SPA Elements
+const headerBg = document.getElementById('headerBg');
+const headerContent = document.getElementById('headerContent');
+const randomFactEl = document.getElementById('randomFact');
+const searchResultsContainer = document.getElementById('searchResultsContainer');
+const tagFilters = document.getElementById('tag-filters');
+const headerSearch = document.querySelector('.header-search');
+
+// Back Button for Instruction Mode (Dynamic)
+let headerBackBtn = null;
 
 let isMenuOpen = false;
-let currentLevel = 'root'; // 'root' или id папки
-let historyStack = []; // Чтобы знать, куда возвращаться
+let currentLevel = 'root';
+let historyStack = [];
+let isTransitioning = false;
+let isInternalRouteUpdate = false; 
 
-// 1. Функция создания иконок
+// Timeouts for view transitions
+let hideSearchTimeout = null;
+let hideInstructionsTimeout = null;
+
+// --- ФАКТЫ И РОТАЦИЯ ---
+const FACT_URL = 'https://gist.githubusercontent.com/SolvexIT/98cac512e240657220e5fde866a392ad/raw';
+let factInterval;
+let factsCache = [];
+
+async function fetchFact() {
+    try {
+        if (factsCache.length === 0) {
+            const response = await fetch(FACT_URL);
+            factsCache = await response.json();
+        }
+
+        if (Array.isArray(factsCache) && factsCache.length > 0) {
+            const randomIndex = Math.floor(Math.random() * factsCache.length);
+            const text = factsCache[randomIndex].text;
+
+            randomFactEl.style.opacity = 0;
+            
+            setTimeout(() => {
+                randomFactEl.classList.remove('scroll-active');
+                randomFactEl.innerHTML = `<span>${text}</span>`;
+                randomFactEl.style.opacity = 1;
+
+                if (window.innerWidth > 768 && text.length > 60) {
+                    randomFactEl.classList.add('scroll-active');
+                }
+            }, 600);
+        }
+    } catch (e) {
+        console.error("Ошибка фактов:", e);
+        randomFactEl.textContent = "Ошибка загрузки факта.";
+    }
+}
+
+function startFactRotation() {
+    fetchFact();
+    stopFactRotation();
+    factInterval = setInterval(fetchFact, 25000);
+}
+
+function stopFactRotation() {
+    if (factInterval) clearInterval(factInterval);
+    randomFactEl.style.opacity = 0;
+}
+
+
+// --- МЕНЮ (ORBIT) ---
 function renderItems(items) {
-    ringArea.innerHTML = ''; // Очищаем текущие
+    ringArea.innerHTML = '';
     const count = items.length;
-    const step = 360 / count; // Шаг угла
+    const step = 360 / count;
 
     items.forEach((item, index) => {
         const el = document.createElement('a');
         el.className = 'orbit-item';
-        
-        // Устанавливаем угол для CSS
-        // Начинаем с -90deg, чтобы первый элемент был сверху
         el.style.setProperty('--angle', `${(index * step) - 90}deg`);
-        
-        // Добавляем задержку для эффекта "падают/появляются по очереди"
         el.style.transitionDelay = `${index * 0.05}s`;
 
-        // Вставляем иконку (картинка или шрифт)
         if (item.icon.includes('fa-')) {
             el.innerHTML = `<i class="${item.icon}"></i>`;
         } else {
             el.innerHTML = `<img src="${item.icon}" style="width:60%;">`;
         }
 
-        // Логика клика
         el.addEventListener('click', (e) => {
-            e.preventDefault(); // Останавливаем переход сразу
-
+            e.preventDefault();
+            if (item.id === 'search') {
+                startSearchAnimation();
+                return;
+            }
             if (item.type === 'folder') {
                 openFolder(item);
             } else {
-                // Эффект "всасывания": убираем класс active
                 orbitMenu.classList.remove('active');
                 isMenuOpen = false;
-
-                // Ждем окончания анимации (400-500мс), прежде чем перейти
                 setTimeout(() => {
-                    if (item.href.startsWith('http')) {
-                        window.open(item.href, '_blank'); // Открываем в новой вкладке, если внешняя ссылка
-                    } else {
-                        window.location.href = item.href; // Переходим на страницу (например, search.html)
+                    if (item.href) {
+                        if (item.href.startsWith('http')) window.open(item.href, '_blank');
+                        else window.location.href = item.href;
                     }
-                }, 500); // 500мс — время, за которое кружки успевают "всосаться"
+                }, 500);
             }
         });
-
         ringArea.appendChild(el);
     });
 }
 
-// 2. Открытие папки
 function openFolder(folderItem) {
-    // Анимация исчезновения текущих
     orbitMenu.classList.remove('active');
-
     setTimeout(() => {
-        historyStack.push(folderItem); // Запоминаем путь
-        renderItems(folderItem.items); // Рендерим новые
-        
-        // Меняем логотип на "Назад" или иконку папки
-        // mainLogoImg.src = 'back_icon.png'; // Можно поменять картинку
-        
-        orbitMenu.classList.add('active'); // Показываем новые
+        historyStack.push(folderItem);
+        renderItems(folderItem.items);
+        orbitMenu.classList.add('active');
     }, 400);
 }
 
-// 3. Возврат назад (при клике на центр, если мы в папке)
 function goBack() {
     orbitMenu.classList.remove('active');
-    
     setTimeout(() => {
-        historyStack.pop(); // Удаляем текущую папку
-        
+        historyStack.pop();
         if (historyStack.length === 0) {
-            // Мы вернулись в начало
             renderItems(menuConfig);
             currentLevel = 'root';
         } else {
-            // Мы вернулись в предыдущую папку
             const prevFolder = historyStack[historyStack.length - 1];
             renderItems(prevFolder.items);
         }
@@ -139,16 +161,19 @@ function goBack() {
     }, 400);
 }
 
-// 4. Главный клик по логотипу
 mainToggle.addEventListener('click', () => {
+    if (isTransitioning) return;
+
+    if (document.body.classList.contains('search-mode') || document.body.classList.contains('view-mode')) {
+        returnToMenu();
+        return;
+    }
+
     if (historyStack.length > 0) {
-        // Если мы в папке - кнопка работает как "Назад"
         goBack();
     } else {
-        // Если мы в корне - кнопка открывает/закрывает меню
         if (!isMenuOpen) {
             renderItems(menuConfig);
-            // Небольшая задержка чтобы браузер отрисовал DOM перед анимацией
             setTimeout(() => orbitMenu.classList.add('active'), 10);
             isMenuOpen = true;
         } else {
@@ -157,3 +182,732 @@ mainToggle.addEventListener('click', () => {
         }
     }
 });
+
+
+// --- АНИМАЦИЯ ПЕРЕХОДА (SPA) ---
+function switchView(viewName, instant = false) {
+    orbitMenu.classList.remove('active');
+    isMenuOpen = false;
+    document.body.classList.add('view-mode');
+
+    const rect = mainToggle.getBoundingClientRect();
+    mainToggle.style.left = rect.left + 'px';
+    mainToggle.style.top = rect.top + 'px';
+    mainToggle.classList.add('logo-transitioning');
+    isTransitioning = true;
+
+    if (instant) {
+        mainToggle.classList.add('logo-phase-3');
+        headerBg.classList.add('active');
+        headerContent.classList.add('active');
+        activateViewContainer(viewName);
+        startFactRotation();
+        isTransitioning = false;
+        return;
+    }
+
+    void mainToggle.offsetWidth;
+
+    setTimeout(() => mainToggle.classList.add('logo-phase-1'), 50);
+    setTimeout(() => mainToggle.classList.add('logo-phase-3'), 850);
+    setTimeout(() => headerBg.classList.add('active'), 850);
+
+    setTimeout(() => {
+        headerContent.classList.add('active');
+        activateViewContainer(viewName);
+        startFactRotation();
+        isTransitioning = false;
+    }, 1800);
+}
+
+// Global reference to re-trigger render
+let globalFilterAndRender = null;
+
+function activateViewContainer(viewName) {
+    const searchResultsContainer = document.getElementById('searchResultsContainer');
+    const instructionsContainer = document.getElementById('instructionsContainer');
+    
+    if (viewName === 'search') {
+        // Hide instructions smoothly
+        if (instructionsContainer) {
+            if (hideInstructionsTimeout) clearTimeout(hideInstructionsTimeout);
+            instructionsContainer.classList.remove('active');
+            hideInstructionsTimeout = setTimeout(() => { instructionsContainer.style.display = 'none'; }, 500);
+        }
+
+        initSearchEngine();
+        
+        // RE-RENDER CONTENT: If returning to search, make sure content is visible
+        if (globalFilterAndRender) {
+            globalFilterAndRender(false);
+        }
+
+        // Remove padding for back button
+        headerContent.classList.remove('has-back-btn');
+
+        if (searchResultsContainer) {
+            if (hideSearchTimeout) clearTimeout(hideSearchTimeout);
+            searchResultsContainer.style.display = 'flex';
+            void searchResultsContainer.offsetWidth; // Reflow
+            searchResultsContainer.classList.add('active');
+        }
+        
+        if(headerSearch) {
+            headerSearch.style.display = 'flex';
+            headerSearch.style.opacity = '0';
+            headerSearch.style.transform = 'translateX(20px)';
+            void headerSearch.offsetWidth;
+            headerSearch.style.opacity = '';
+            headerSearch.style.transform = '';
+        }
+
+        document.body.classList.add('search-mode');
+        if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
+        
+    } else if (viewName === 'instructions') {
+        // Hide Search Results smoothly
+        if (searchResultsContainer) {
+            if (hideSearchTimeout) clearTimeout(hideSearchTimeout);
+            searchResultsContainer.classList.remove('active');
+            hideSearchTimeout = setTimeout(() => { searchResultsContainer.style.display = 'none'; }, 500);
+        }
+
+        // Add padding for back button
+        headerContent.classList.add('has-back-btn');
+
+        if (instructionsContainer) {
+            if (hideInstructionsTimeout) clearTimeout(hideInstructionsTimeout);
+            instructionsContainer.style.display = 'flex';
+            void instructionsContainer.offsetWidth; // Reflow
+            instructionsContainer.classList.add('active');
+        }
+        
+        // Hide Search UI completely
+        if(headerSearch) headerSearch.style.display = 'none';
+        const resultsArea = document.getElementById('results-area');
+        if (resultsArea) resultsArea.innerHTML = ''; 
+
+        if(!headerBackBtn) {
+            headerBackBtn = document.createElement('button');
+            headerBackBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
+            headerBackBtn.className = 'header-back-btn';
+            headerBackBtn.style.position = 'fixed';
+            headerBackBtn.style.top = '25px';
+            headerBackBtn.style.left = '90px';
+            headerBackBtn.style.zIndex = '110';
+            headerBackBtn.style.background = 'none';
+            headerBackBtn.style.border = 'none';
+            headerBackBtn.style.color = '#58A6FF';
+            headerBackBtn.style.fontSize = '24px';
+            headerBackBtn.style.cursor = 'pointer';
+            headerBackBtn.style.transition = 'transform 0.2s';
+            headerBackBtn.onmouseover = () => headerBackBtn.style.transform = 'translateX(-3px)';
+            headerBackBtn.onmouseout = () => headerBackBtn.style.transform = 'translateX(0)';
+            
+            headerBackBtn.onclick = closeInstruction;
+            document.body.appendChild(headerBackBtn);
+        }
+    }
+}
+
+// ROUTING HELPER
+function setHash(hash) {
+    if (window.location.hash !== hash) {
+        isInternalRouteUpdate = true;
+        window.location.hash = hash;
+        setTimeout(() => { isInternalRouteUpdate = false; }, 300);
+    }
+}
+
+function startSearchAnimation(instant = false) {
+    if (!window.location.hash.startsWith('#/docs/')) {
+         setHash('#/search');
+    }
+    switchView('search', instant);
+}
+
+function returnToMenu() {
+    if (isTransitioning) return;
+    isTransitioning = true;
+
+    // Clear hash without reload
+    history.pushState("", document.title, window.location.pathname + window.location.search);
+
+    stopFactRotation();
+    document.body.classList.remove('view-mode');
+    document.body.classList.remove('search-mode');
+    headerContent.classList.remove('has-back-btn');
+
+    const input = document.getElementById('searchInput');
+    if(input) input.blur();
+
+    headerContent.classList.remove('active');
+    
+    // Hide containers
+    const searchResultsContainer = document.getElementById('searchResultsContainer');
+    const instructionsContainer = document.getElementById('instructionsContainer');
+    if (searchResultsContainer) {
+        if (hideSearchTimeout) clearTimeout(hideSearchTimeout);
+        searchResultsContainer.classList.remove('active');
+        hideSearchTimeout = setTimeout(() => { searchResultsContainer.style.display = 'none'; }, 500);
+    }
+    if (instructionsContainer) {
+        if (hideInstructionsTimeout) clearTimeout(hideInstructionsTimeout);
+        instructionsContainer.classList.remove('active');
+        hideInstructionsTimeout = setTimeout(() => { instructionsContainer.style.display = 'none'; }, 500);
+    }
+    
+    if(headerBackBtn) { headerBackBtn.remove(); headerBackBtn = null; }
+    if(headerSearch) headerSearch.style.display = 'flex';
+    tagFilters.classList.remove('active');
+
+    setTimeout(() => {
+        headerBg.classList.remove('active');
+    }, 400);
+
+    setTimeout(() => {
+        mainToggle.classList.remove('logo-phase-3');
+        mainToggle.classList.remove('logo-phase-1');
+    }, 600);
+
+    setTimeout(() => {
+        mainToggle.classList.remove('logo-transitioning');
+        mainToggle.style.left = '';
+        mainToggle.style.top = '';
+        mainToggle.style.transform = '';
+
+        renderItems(menuConfig);
+        isMenuOpen = false;
+        orbitMenu.classList.remove('active');
+        isTransitioning = false;
+    }, 1400);
+}
+
+
+// --- ПОИСКОВОЙ ДВИЖОК И КОНТЕНТ ---
+let searchInitialized = false;
+const contentBaseUrl = 'https://raw.githubusercontent.com/SolvexIT/inst_cloud/main/';
+let dbGlobal = [];
+
+function updateURLState(params) {
+    const url = new URL(window.location);
+    Object.keys(params).forEach(key => {
+        if (params[key]) url.searchParams.set(key, params[key]);
+        else url.searchParams.delete(key);
+    });
+    window.history.replaceState({}, '', url);
+}
+
+// NOTE: parseMarkdown removed from here, now in JS/instruction-renderer.js
+
+// --- SCROLL MANAGEMENT & RESTORATION ---
+
+function saveScrollPosition(path) {
+    const container = document.getElementById('instructionsContainer');
+    if (container) {
+        // Use sessionStorage to persist across reloads but clear on tab close
+        // Key includes path to be specific to the document
+        sessionStorage.setItem('scrollPos_' + path, container.scrollTop);
+    }
+}
+
+function restoreScrollPosition(path) {
+    const container = document.getElementById('instructionsContainer');
+    const savedPos = sessionStorage.getItem('scrollPos_' + path);
+    if (container && savedPos !== null) {
+        // Delay slightly to ensure layout is stable
+        setTimeout(() => {
+            container.scrollTo({ top: parseInt(savedPos), behavior: 'auto' });
+        }, 50);
+    }
+}
+
+let scrollDebounceTimer;
+function handleScrollSpy(path) {
+    const container = document.getElementById('instructionsContainer');
+    if (!container) return;
+
+    // Save Position only. No URL update.
+    if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+    scrollDebounceTimer = setTimeout(() => {
+        saveScrollPosition(path);
+    }, 150);
+}
+
+function openInstruction(resourcePath, anchor = null) {
+    const instructionsContent = document.getElementById('instructionsContent');
+    const instructionsContainer = document.getElementById('instructionsContainer');
+    
+    const clearBtn = document.getElementById('clearSearchBtn');
+    if (clearBtn) clearBtn.click();
+
+    if (!document.body.classList.contains('view-mode')) {
+         switchView('search', true);
+    }
+    activateViewContainer('instructions');
+    
+    if (instructionsContent) {
+        instructionsContent.innerHTML = '<div class="loading" style="text-align:center; padding:20px; color:#888;">Загрузка информации...</div>';
+    }
+
+    // Normalize path: decode, flip slashes, trim
+    let processedPath = resourcePath;
+    try { processedPath = decodeURIComponent(processedPath); } catch(e) {}
+    
+    // 1. Clean up the path and remove leading/trailing slashes
+    let finalPath = processedPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    
+    // 2. Remove extension if present
+    finalPath = finalPath.replace(/\.json$/, '');
+    
+    // 3. Determine Fetch Path (Restore "docs/" default behavior)
+    // If the path does not start with "docs/", prepend it.
+    let fetchPath = finalPath;
+    if (!fetchPath.startsWith('docs/')) {
+        fetchPath = 'docs/' + fetchPath;
+    }
+
+    // 4. Update URL hash (always #/docs/[id])
+    // We strip 'docs/' from the start for the hash ID to keep it clean, if present.
+    let id = fetchPath;
+    if (id.startsWith('docs/')) {
+        id = id.substring(5);
+    }
+
+    // Construct clean hash. Use decoded ID if possible for display.
+    let newHash = '#/docs/' + id;
+    if (anchor) {
+        newHash += '#' + anchor;
+    }
+
+    // Use replaceState/pushState to avoid double encoding by browser if possible
+    // Note: window.location.hash = ... automatically encodes some chars.
+    // We try to push the "clean" decoded version.
+    try {
+        window.history.pushState({}, '', newHash);
+    } catch(e) {
+        // Fallback
+        window.location.hash = newHash;
+    }
+
+    // 5. Construct final fetch URL
+    const fullUrl = contentBaseUrl + fetchPath;
+
+    // Remove old listeners to prevent stacking
+    const container = document.getElementById('instructionsContainer');
+    if (container) {
+         // We can't easily remove anonymous functions or bounded args without storing ref.
+         // Simple trick: clone and replace to strip listeners, OR just set onscroll.
+         // Setting onscroll is safer/easier here.
+         container.onscroll = () => handleScrollSpy(id);
+    }
+
+    fetch(fullUrl)
+        .then(res => {
+            if(!res.ok) throw new Error(`Не удалось загрузить файл инструкции (Status: ${res.status})`);
+            return res.text();
+        })
+        .then(data => {
+            if (window.renderInstructionContent) {
+                // Check for saved scroll position
+                const savedPos = sessionStorage.getItem('scrollPos_' + id);
+                const hasSavedPos = savedPos !== null;
+
+                // Force instant rendering if we have an anchor OR saved data
+                // This prevents animation on reload
+                const shouldBeInstant = !!anchor || hasSavedPos;
+
+                window.renderInstructionContent(data, 'instructionsContent', { instant: shouldBeInstant });
+                
+                if (anchor) {
+                    // 1. Scroll to Anchor
+                    setTimeout(() => {
+                        scrollToAnchor(anchor);
+                        
+                        // 2. CLEAN URL after 3 seconds
+                        // Remove anchor from URL so reloads don't stuck here
+                        setTimeout(() => {
+                            const cleanHash = '#/docs/' + id;
+                            try {
+                                history.replaceState(null, null, cleanHash);
+                            } catch(e) {}
+                        }, 3000);
+
+                    }, 50); 
+                } else if (hasSavedPos) {
+                    // 3. Restore Session Position (Reload case)
+                    restoreScrollPosition(id);
+                }
+            } else {
+                throw new Error("Renderer not found");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            instructionsContent.innerHTML = `<div class="error-msg" style="color:#ff6b6b; text-align:center;">
+                <h3>Ошибка загрузки</h3>
+                <p>${err.message}</p>
+                <div style="font-size:0.8em; color:#888; margin:10px 0; word-break:break-all; background:#222; padding:5px; border-radius:4px;">
+                    Trying to fetch:<br>
+                    <a href="${fullUrl}" target="_blank" style="color:#58A6FF;">${fullUrl}</a>
+                </div>
+                <button onclick="closeInstruction()" style="margin-top:20px; padding:8px 16px; background:#333; color:white; border:none; cursor:pointer;">Назад</button>
+            </div>`;
+        });
+}
+
+window.closeInstruction = function() {
+    setHash('#/search');
+    activateViewContainer('search');
+};
+
+function initSearchEngine() {
+    if (searchInitialized) return;
+
+    const searchInput = document.getElementById('searchInput');
+    const resultsArea = document.getElementById('results-area');
+    const toggleTagsBtn = document.getElementById('toggleTagsBtn');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const instructionsContainer = document.getElementById('instructionsContainer');
+
+    toggleTagsBtn.onclick = () => {
+        const tagFilters = document.getElementById('tag-filters');
+        if (tagFilters) tagFilters.classList.toggle('active');
+    };
+    clearSearchBtn.onclick = () => {
+        searchInput.value = '';
+        selectedTags.clear();
+        updateURLState({ search: null, tags: null });
+        if(updateTagsUI) updateTagsUI();
+        if (resultsArea) resultsArea.innerHTML = '';
+        filterAndRender();
+        searchInput.focus();
+    };
+
+    let selectedTags = new Set();
+    let currentFilteredItems = [];
+    let itemsToShow = 5;
+    const loadMoreStep = 10;
+    let updateTagsUI;
+
+    fetch('https://gist.githubusercontent.com/SolvexIT/6c9d9ebc89835f8812cfb66d18268324/raw')
+        .then(res => res.json())
+        .then(data => {
+            dbGlobal = data;
+            createTagFilters(dbGlobal);
+            const urlParams = new URLSearchParams(window.location.search);
+            const savedQuery = urlParams.get('search');
+            const savedTags = urlParams.get('tags');
+            if (savedQuery) searchInput.value = savedQuery;
+            if (savedTags) {
+                savedTags.split(',').forEach(t => selectedTags.add(t));
+                if(updateTagsUI) updateTagsUI();
+            }
+            filterAndRender(false);
+        })
+        .catch(err => console.error("DB Error:", err));
+
+    let timeout;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(timeout);
+        if (instructionsContainer && instructionsContainer.classList.contains('active')) closeInstruction();
+        timeout = setTimeout(() => {
+            filterAndRender();
+            const query = searchInput.value.trim();
+            updateURLState({ search: query || null });
+        }, 300);
+    });
+
+    function filterAndRender(reset = true) {
+        const query = searchInput.value.toLowerCase().trim();
+        currentFilteredItems = dbGlobal.filter(item => {
+            if (selectedTags.size > 0) {
+                const itemTags = item.tags.split(',').map(t => t.trim());
+                if (!Array.from(selectedTags).some(tag => itemTags.includes(tag))) return false;
+            }
+            if (!query && selectedTags.size === 0) return true;
+            const inName = item.name.toLowerCase().includes(query);
+            const inTags = item.tags.toLowerCase().includes(query);
+            const inDesc = item.description ? item.description.toLowerCase().includes(query) : false;
+            return inName || inTags || inDesc;
+        });
+        if (reset) itemsToShow = 5;
+        renderResults();
+    }
+    globalFilterAndRender = filterAndRender;
+
+    function renderResults() {
+        resultsArea.innerHTML = '';
+        if (currentFilteredItems.length === 0) {
+            resultsArea.innerHTML = '<div class="no-results" style="color:#aaa; text-align:center; white-space: pre-line;">Ничего не найдено...\nНапишите нам в <a href="https://teletype.in/@solvex/support" target="_blank" style="color:#58A6FF;">поддержку</a>!</div>';
+            return;
+        }
+
+        currentFilteredItems.slice(0, itemsToShow).forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.style.cursor = 'pointer';
+
+            const isExternal = item.link.startsWith('http');
+            const cleanLink = isExternal ? item.link : item.link.replace(/\.json$/, '');
+
+            const tagsHtml = item.tags.split(',').map(tag => {
+                const trimmedTag = tag.trim();
+                const isActive = selectedTags.has(trimmedTag) ? 'is-active' : '';
+                return `<span class="tag_container ${isActive}">#${trimmedTag}</span>`;
+            }).join(' ');
+            
+            card.innerHTML = `
+                <a href="${cleanLink}" ${isExternal ? 'target="_blank"' : ''} style="text-decoration: none; color: inherit; display: block;" class="card-link">
+                    <span class="result-title">${item.name}</span>
+                    <span class="result-link">${cleanLink}</span>
+                    <div class="result-description">${item.description || ''}</div>
+                </a>
+                <div class="result-tags" style="margin-top: 8px;">${tagsHtml}</div>
+            `;
+            
+            card.style.animation = "fadeIn 0.5s ease";
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.tag_container')) return;
+                e.preventDefault();
+                if (isExternal) window.open(item.link, '_blank');
+                else openInstruction(cleanLink);
+            });
+
+            resultsArea.appendChild(card);
+
+            card.querySelectorAll('.result-tags .tag_container').forEach(tagEl => {
+                tagEl.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    const tag = tagEl.textContent.replace('#', '').trim();
+                    if (selectedTags.has(tag)) selectedTags.delete(tag);
+                    else selectedTags.add(tag);
+                    updateURLState({ tags: Array.from(selectedTags).join(',') || null });
+                    if (updateTagsUI) updateTagsUI();
+                    filterAndRender();
+                });
+            });
+        });
+
+        if (currentFilteredItems.length > itemsToShow) {
+            const btn = document.createElement('button');
+            btn.className = 'load-more-btn';
+            btn.textContent = 'Показать ещё';
+            btn.onclick = () => { itemsToShow += loadMoreStep; renderResults(); };
+            resultsArea.appendChild(btn);
+        }
+    }
+
+    function createTagFilters(data) {
+        const allTags = new Set();
+        data.forEach(item => item.tags.split(',').forEach(tag => allTags.add(tag.trim())));
+        const sortedTags = Array.from(allTags).sort();
+        const tagFilters = document.getElementById('tag-filters');
+
+        tagFilters.innerHTML = `
+            <input type="text" id="tagSearchInput" class="tag-search-input" placeholder="Фильтр..." style="width:100%; margin-bottom:10px; background:#1e1e1e; border:1px solid #444; color:white; padding:5px; border-radius:4px;">
+            <div id="available-tags" class="available-tags" style="max-height:150px; overflow-y:auto;"></div>
+            <div id="selected-tags" class="selected-tags"></div>
+            <button class="clear-tags-btn" id="clearTagsBtn">Сбросить все теги</button>
+        `;
+
+        const tagInput = document.getElementById('tagSearchInput');
+        const availDiv = document.getElementById('available-tags');
+        const selDiv = document.getElementById('selected-tags');
+        const clearBtn = document.getElementById('clearTagsBtn');
+
+        clearBtn.onclick = () => {
+            selectedTags.clear();
+            updateURLState({ tags: null });
+            updateUI();
+            filterAndRender();
+        };
+
+        function updateUI() {
+            selDiv.innerHTML = '';
+            selectedTags.forEach(tag => {
+                const sp = document.createElement('span');
+                sp.className = 'tag_container selected-tag';
+                sp.style.display = 'inline-block';
+                sp.style.margin = '2px';
+                sp.innerHTML = `#${tag} <span style="cursor:pointer; margin-left:5px; color:#ff6b6b;">&times;</span>`;
+                sp.querySelector('span').onclick = () => { 
+                    selectedTags.delete(tag); 
+                    updateURLState({ tags: Array.from(selectedTags).join(',') || null });
+                    updateUI(); 
+                    filterAndRender(); 
+                };
+                selDiv.appendChild(sp);
+            });
+
+            availDiv.innerHTML = '';
+            const filter = tagInput.value.toLowerCase();
+            const visible = sortedTags.filter(t => t.toLowerCase().includes(filter) && !selectedTags.has(t));
+
+            visible.forEach(tag => {
+                const a = document.createElement('a');
+                a.className = 'tag_container available-tag';
+                a.textContent = `#${tag}`;
+                a.href = '#';
+                a.style.display = 'inline-block';
+                a.style.margin = '2px';
+                a.onclick = (e) => { 
+                    e.preventDefault(); 
+                    selectedTags.add(tag); 
+                    updateURLState({ tags: Array.from(selectedTags).join(',') });
+                    updateUI(); 
+                    filterAndRender(); 
+                };
+                availDiv.appendChild(a);
+            });
+        }
+        updateTagsUI = updateUI;
+        tagInput.addEventListener('input', updateUI);
+        updateUI();
+    }
+
+    if (!document.getElementById('dynamic-styles')) {
+        const s = document.createElement("style");
+        s.id = 'dynamic-styles';
+        s.innerText = `
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            .tag_container.is-active {
+                background: rgba(0, 145, 217, 0.5) !important;
+                border-color: rgba(0, 145, 217, 0.8) !important;
+                color: white !important;
+                box-shadow: 0 0 10px rgba(0, 145, 217, 0.3);
+            }
+        `;
+        document.head.appendChild(s);
+    }
+    searchInitialized = true;
+}
+
+// --- INITIALIZATION & ROUTING ---
+window.addEventListener('load', () => {
+    handleRouting();
+    window.addEventListener('hashchange', handleRouting);
+    window.addEventListener('popstate', handleRouting);
+});
+
+window.handleAnchorClick = function(slug) {
+    // Current hash structure: #/docs/path/to/file OR #/docs/path/to/file#currentAnchor
+    const currentHash = window.location.hash;
+    
+    // Check if we are in docs mode
+    if (!currentHash.startsWith('#/docs/')) return;
+    
+    // Extract base path (everything before the second #)
+    const parts = currentHash.split('#'); 
+    // parts[0] is empty, parts[1] is base route
+    
+    const basePath = parts[1]; 
+    if (!basePath) return;
+
+    // We want clear URLs.
+    const newHash = '#' + basePath + '#' + slug;
+
+    // Avoid triggering full route reload loop if only anchor changed
+    if (window.location.hash !== newHash) {
+        isInternalRouteUpdate = true;
+        // Replace state to avoid history spam for anchor jumps, or pushState if you want back button support.
+        // Using replaceState is often cleaner for in-page anchors unless precise history is needed.
+        // But user might want to go "back" to previous section. Let's use pushState.
+        // Decoding basePath if it was encoded ensures cleaner URL.
+        try {
+            history.pushState({}, '', newHash);
+        } catch(e) {
+            window.location.hash = newHash;
+        }
+        setTimeout(() => { isInternalRouteUpdate = false; }, 300);
+    }
+    
+    scrollToAnchor(slug);
+
+    // CLEAN URL after 3 seconds
+    setTimeout(() => {
+        const cleanHash = '#' + basePath;
+        try {
+            history.replaceState(null, null, cleanHash);
+        } catch(e) {}
+    }, 3000);
+};
+
+function scrollToAnchor(id) {
+    if (!id) return;
+
+    // Helper to match renderer's ID generation
+    const slugify = (text) => {
+        try {
+             return decodeURIComponent(text).toLowerCase().trim().replace(/[^\w\u0400-\u04FF\s-]/g, '').replace(/\s+/g, '-');
+        } catch(e) {
+             return text.toLowerCase().trim().replace(/[^\w\u0400-\u04FF\s-]/g, '').replace(/\s+/g, '-');
+        }
+    };
+
+    const targetId = id;
+    const slugId = slugify(id);
+
+    // Retry a few times in case of rendering/loading delays
+    const attemptScroll = (count) => {
+        // Try exact ID first, then slugified ID
+        let el = document.getElementById(targetId);
+        if (!el) el = document.getElementById(slugId);
+        
+        if (el) {
+            const headerOffset = 100;
+            const elementPosition = el.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.scrollY - headerOffset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: "smooth"
+            });
+
+            // Optional: flash highlight
+            el.style.transition = 'background 0.5s';
+            el.style.backgroundColor = 'rgba(88, 166, 255, 0.2)';
+            setTimeout(() => { el.style.backgroundColor = ''; }, 2000);
+        } else if (count > 0) {
+            setTimeout(() => attemptScroll(count - 1), 200);
+        }
+    };
+    attemptScroll(5);
+}
+
+function handleRouting() {
+    if (isInternalRouteUpdate) return;
+
+    const hash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasSearch = urlParams.get('search') || urlParams.get('tags');
+
+    if (hash === '#/search') {
+        startSearchAnimation(true);
+    } else if (hash.startsWith('#/docs/') && hash.length > 7) {
+        let path = hash.substring(7);
+        let anchor = null;
+        
+        // Handle anchor in URL (e.g. #/docs/path#header-id)
+        const parts = path.split('#');
+        if (parts.length > 1) {
+            path = parts[0];
+            anchor = parts.slice(1).join('#'); // Join remainder just in case
+        }
+
+        if (!document.body.classList.contains('view-mode')) {
+            startSearchAnimation(true);
+        }
+        openInstruction(path, anchor);
+    } else if (hasSearch && !hash) {
+        setHash('#/search');
+    } else if (!hash) {
+        if (document.body.classList.contains('view-mode')) {
+            returnToMenu();
+        } else {
+             renderItems(menuConfig);
+             isMenuOpen = false;
+             orbitMenu.classList.remove('active');
+        }
+    }
+}

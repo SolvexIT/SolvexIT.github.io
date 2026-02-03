@@ -1,5 +1,5 @@
 /* --- АНИМИРОВАННЫЙ ФОН --- */
-bg-animation {
+.bg-animation {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
@@ -45,11 +45,23 @@ body {
     position: absolute;
     box-shadow: 0 0 30px rgba(0, 136, 204, 0.2);
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: breathing 3s ease-in-out infinite; /* Направляющий пульс */
+}
+
+@keyframes breathing {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 145, 217, 0.2); }
+    50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(0, 145, 217, 0.4); }
+}
+
+/* Останавливаем пульсацию только в режиме перехода в поиск */
+.logo-transitioning {
+    animation: none !important;
 }
 
 .main-toggle:hover {
-    transform: scale(1.1);
-    
+    animation: none !important; /* Отключаем пульс при наведении, чтобы сработал hover-эффект */
+    transform: scale(1.15);
+    box-shadow: 0 0 40px var(--accent), 0 0 15px var(--wh-color);
 }
 
 .main-toggle:active { transform: scale(0.9); }
@@ -129,23 +141,4 @@ body {
 
 
 
-body {
-    /* Основной глубокий градиент под цвет лого */
-    background: radial-gradient(circle at center, #0a192f 0%, #050a0f 100%);
-    font-family: 'Segoe UI', sans-serif;
-    min-height: 100vh;
-    overflow: hidden;
-    position: relative;
-}
-
-/* --- АНИМИРОВАННЫЙ ФОН --- */
-.bg-animation {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: -1;
-    background: linear-gradient(45deg, transparent 45%, var(--dark-blue) 50%, transparent 55%);
-    background-size: 200% 200%;
-    animation: bgMove 10s infinite linear;
-    opacity: 0.2;
-}
+/* Background animation handled in style.css */

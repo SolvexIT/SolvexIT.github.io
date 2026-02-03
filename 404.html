@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Redirecting...</title>
+    <script>
+      // 404.html для GitHub Pages: перенаправление на Hash Router
+      // Пример: /search -> /#/search
+      // Пример: /docs/example -> /#/docs/example
+      var l = window.location;
+      var path = l.pathname;
+      var repoName = '/'; // Если сайт в корне, то '/'.
+      
+      // Если сайт в подпапке (например, /repo-name/), нужно учесть это
+      // Здесь мы предполагаем корень (username.github.io)
+      
+      if (path !== '/' && path !== '/index.html') {
+          // Убираем начальный слеш, если он есть
+          var route = path; 
+          // Редирект на главную с добавлением хеша
+          l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/#' + route + l.search + l.hash);
+      }
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
