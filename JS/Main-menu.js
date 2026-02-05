@@ -453,6 +453,13 @@ function openInstruction(resourcePath, anchor = null) {
     // Normalize path: decode, flip slashes, trim
     let processedPath = resourcePath;
     try { processedPath = decodeURIComponent(processedPath); } catch(e) {}
+
+    // Extract anchor if present in decoded path (fixes %23 case)
+    if (!anchor && processedPath.includes('#')) {
+        const parts = processedPath.split('#');
+        processedPath = parts[0];
+        anchor = parts.slice(1).join('#');
+    }
     
     // 1. Clean up the path and remove leading/trailing slashes
     let finalPath = processedPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
@@ -520,20 +527,8 @@ function openInstruction(resourcePath, anchor = null) {
                 window.renderInstructionContent(data, 'instructionsContent', { instant: shouldBeInstant });
                 
                 if (anchor) {
-                    // 1. Scroll to Anchor
-                    setTimeout(() => {
-                        scrollToAnchor(anchor);
-                        
-                        // 2. CLEAN URL after 3 seconds
-                        // Remove anchor from URL so reloads don't stuck here
-                        setTimeout(() => {
-                            const cleanHash = '#/docs/' + id;
-                            try {
-                                history.replaceState(null, null, cleanHash);
-                            } catch(e) {}
-                        }, 3000);
-
-                    }, 50); 
+                    // 1. Show Popup for manual navigation
+                    showAnchorPopup(anchor);
                 } else if (hasSavedPos) {
                     // 3. Restore Session Position (Reload case)
                     restoreScrollPosition(id);
@@ -910,4 +905,97 @@ function handleRouting() {
              orbitMenu.classList.remove('active');
         }
     }
+}
+
+function showAnchorPopup(anchorId) {
+    // Check if we already handled this in the current session
+    if (sessionStorage.getItem('anchor_popup_seen')) return;
+
+    // Remove existing notification if present
+    const existing = document.getElementById('anchor-popup-notification');
+    if (existing) existing.remove();
+
+    // Create popup container
+    const popup = document.createElement('div');
+    popup.id = 'anchor-popup-notification';
+    popup.style.cssText = `
+        position: fixed;
+        bottom: 40px;
+        right: 40px;
+        background: #1e1e1e;
+        border: 2px solid #58A6FF;
+        border-radius: 16px;
+        padding: 25px;
+        z-index: 2147483647;
+        box-shadow: 0 15px 45px rgba(0,0,0,0.7);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        animation: slideInBottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        max-width: 400px;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        backdrop-filter: blur(10px);
+    `;
+    
+    // Inject animation style if needed
+    if (!document.getElementById('popup-anim-style')) {
+        const style = document.createElement('style');
+        style.id = 'popup-anim-style';
+        style.textContent = `@keyframes slideInBottom { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`;
+        document.head.appendChild(style);
+    }
+
+    popup.innerHTML = `
+        <div style="color: #fff; font-size: 18px; display: flex; align-items: flex-start; gap: 15px; line-height: 1.5;">
+            <div style="background: rgba(88, 166, 255, 0.1); padding: 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-location-arrow" style="color: #58A6FF; font-size: 24px;"></i>
+            </div>
+            <div>
+                <strong style="display:block; margin-bottom: 6px; color: #58A6FF; font-size: 20px;">Перейти к разделу?</strong>
+                <span style="color: #ddd; font-size: 15px;">Эта ссылка ведёт на конкретную часть документа. Хотите переместиться туда сейчас?</span>
+            </div>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 5px;">
+            <button id="anchor-skip-btn" style="background: transparent; border: 1px solid #444; color: #aaa; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 500;">Пропустить</button>
+            <button id="anchor-go-btn" style="background: #58A6FF; border: none; color: white; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; transition: all 0.2s; box-shadow: 0 4px 12px rgba(88, 166, 255, 0.4); font-size: 15px;">Перейти сейчас</button>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    // Event Listeners
+    const goBtn = document.getElementById('anchor-go-btn');
+    const skipBtn = document.getElementById('anchor-skip-btn');
+
+    const clearURLAnchor = () => {
+        const hashParts = window.location.hash.split('#');
+        if (hashParts.length > 2) {
+            const cleanHash = '#' + hashParts[1];
+            try {
+                history.replaceState(null, null, cleanHash);
+            } catch(e) {}
+        }
+    };
+
+    goBtn.onmouseover = () => { goBtn.style.transform = 'translateY(-2px)'; goBtn.style.boxShadow = '0 4px 12px rgba(88, 166, 255, 0.4)'; };
+    goBtn.onmouseout = () => { goBtn.style.transform = 'translateY(0)'; goBtn.style.boxShadow = '0 2px 8px rgba(88, 166, 255, 0.3)'; };
+
+    skipBtn.onmouseover = () => { skipBtn.style.borderColor = '#666'; skipBtn.style.color = '#fff'; };
+    skipBtn.onmouseout = () => { skipBtn.style.borderColor = '#444'; skipBtn.style.color = '#aaa'; };
+
+    goBtn.onclick = () => {
+        scrollToAnchor(anchorId);
+        sessionStorage.setItem('anchor_popup_seen', 'true');
+        clearURLAnchor();
+        popup.style.opacity = '0';
+        popup.style.transform = 'translateY(20px)';
+        setTimeout(() => popup.remove(), 300);
+    };
+
+    skipBtn.onclick = () => {
+        clearURLAnchor();
+        popup.style.opacity = '0';
+        popup.style.transform = 'translateY(20px)';
+        setTimeout(() => popup.remove(), 300);
+    };
 }

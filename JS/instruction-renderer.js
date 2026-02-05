@@ -53,8 +53,212 @@ style.textContent = `
         line-height: 1;
         vertical-align: middle;
     }
+
+    /* Image Preview Modal */
+    .image-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        backdrop-filter: blur(8px);
+        cursor: zoom-out;
+    }
+    .image-modal.active {
+        display: flex;
+        opacity: 1;
+    }
+    .image-modal img {
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+        border-radius: 8px;
+        transform: scale(0.9) translate(0, 0);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        user-select: none;
+        -webkit-user-drag: none;
+        cursor: grab;
+        touch-action: none; /* Важно для мобильных жестов */
+    }
+    .image-modal img:active {
+        cursor: grabbing;
+    }
+    .image-modal.active img {
+        transform: scale(1) translate(0, 0);
+    }
+    /* Убираем анимацию при активном взаимодействии для плавности */
+    .image-modal img.interacting {
+        transition: none !important;
+    }
+    .img-container img {
+        transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+    }
+    .img-container img:hover {
+        transform: scale(1.02);
+        box-shadow: 0 0 20px rgba(88, 166, 255, 0.4), 0 5px 15px rgba(0,0,0,0.3) !important;
+    }
+    .close-modal-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: white;
+        font-size: 24px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.2s;
+        z-index: 10001;
+    }
+    .close-modal-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.1);
+        color: #ff5f5f;
+    }
 `;
 document.head.appendChild(style);
+
+// --- IMAGE PREVIEW MODAL LOGIC ---
+(function initImagePreview() {
+    const modal = document.createElement('div');
+    modal.id = 'imagePreviewModal';
+    modal.className = 'image-modal';
+    modal.innerHTML = `
+        <button class="close-modal-btn" onclick="window.closeImagePreview()"><i class="fas fa-times"></i></button>
+        <img id="previewImage" src="" alt="Preview">
+    `;
+
+    const img = modal.querySelector('img');
+    let scale = 1, translateX = 0, translateY = 0;
+    let isDragging = false, startX, startY;
+    let initialDistance = 0;
+
+    const updateTransform = (animate = false) => {
+        if (animate) img.classList.remove('interacting');
+        else img.classList.add('interacting');
+        img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    };
+
+    // Zoom with Wheel
+    modal.onwheel = (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        const newScale = Math.min(Math.max(1, scale * delta), 5);
+        if (newScale === scale) return;
+        
+        scale = newScale;
+        if (scale === 1) { translateX = 0; translateY = 0; }
+        updateTransform();
+    };
+
+    // Drag / Pan Logic
+    const startPan = (x, y) => {
+        if (scale === 1) return;
+        isDragging = true;
+        startX = x - translateX;
+        startY = y - translateY;
+        img.classList.add('interacting');
+    };
+
+    const doPan = (x, y) => {
+        if (!isDragging) return;
+        translateX = x - startX;
+        translateY = y - startY;
+        updateTransform();
+    };
+
+    const endPan = () => {
+        isDragging = false;
+        img.classList.remove('interacting');
+    };
+
+    // Mouse Events
+    img.onmousedown = (e) => { e.stopPropagation(); startPan(e.clientX, e.clientY); };
+    window.addEventListener('mousemove', (e) => doPan(e.clientX, e.clientY));
+    window.addEventListener('mouseup', endPan);
+
+    // Touch Events (Mobile)
+    img.ontouchstart = (e) => {
+        e.stopPropagation();
+        if (e.touches.length === 1) {
+            startPan(e.touches[0].clientX, e.touches[0].clientY);
+        } else if (e.touches.length === 2) {
+            initialDistance = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+        }
+    };
+
+    img.ontouchmove = (e) => {
+        if (e.touches.length === 1) {
+            doPan(e.touches[0].clientX, e.touches[0].clientY);
+        } else if (e.touches.length === 2) {
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            const delta = dist / initialDistance;
+            initialDistance = dist;
+            scale = Math.min(Math.max(1, scale * delta), 5);
+            if (scale === 1) { translateX = 0; translateY = 0; }
+            updateTransform();
+        }
+    };
+
+    img.ontouchend = endPan;
+
+    // Reset and Close
+    window.resetImageZoom = () => {
+        scale = 1; translateX = 0; translateY = 0;
+        updateTransform(true);
+    };
+
+    modal.onclick = (e) => {
+        if (e.target.id === 'imagePreviewModal') window.closeImagePreview();
+    };
+    
+    // Add ESC key listener
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') window.closeImagePreview();
+    });
+
+    document.body.appendChild(modal);
+})();
+
+window.openImagePreview = function(src) {
+    const modal = document.getElementById('imagePreviewModal');
+    const img = document.getElementById('previewImage');
+    if (window.resetImageZoom) window.resetImageZoom();
+    img.src = src;
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+    document.body.style.overflow = 'hidden'; // Prevent scrolling
+};
+
+window.closeImagePreview = function() {
+    const modal = document.getElementById('imagePreviewModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    if (window.resetImageZoom) window.resetImageZoom();
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = ''; // Restore scrolling
+    }, 300);
+};
 
 window.renderInstructionContent = function(data, targetElementId, options = {}) {
     const targetElement = document.getElementById(targetElementId);
@@ -225,6 +429,7 @@ function parseMarkdown(lines) {
     let codeLang = '';
     let inList = false;
     let listType = '';
+    let lastIndentLevel = 0; // Track indentation to detect nested lists or breaks
 
     const iconMap = window.iconMap || {};
 
@@ -309,22 +514,22 @@ function parseMarkdown(lines) {
                     if (sM) size = sM[1].trim();
                     if (!src) return '';
                     // Apply indentStyle to the image container
-                    return `<div class="img-container animate-text wait-animation" style="margin: 20px 0; ${indentStyle} text-align: ${pos === 'left' ? 'left' : (pos === 'right' ? 'right' : 'center')};"><img src="${src.replace(/&amp;/g, '&')}" style="width: ${size}; max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);" alt="Image"></div>`;
+                    return `<div class="img-container animate-text wait-animation" style="margin: 20px 0; ${indentStyle} text-align: ${pos === 'left' ? 'left' : (pos === 'right' ? 'right' : 'center')};"><img src="${src.replace(/&amp;/g, '&')}" onclick="window.openImagePreview(this.src)" style="width: ${size}; max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); cursor: zoom-in;" alt="Image"></div>`;
                 });
             }
         });
     };
 
     lines.forEach((line) => {
-        // 0. CALCULATE INDENTATION (4 spaces = 1 level, 1 tab = 1 level/4 spaces)
+        // 0. CALCULATE INDENTATION (Each space counts as a level for margin)
         const leadingWhitespace = line.match(/^[\t ]*/)[0];
         let spaceCount = 0;
         for (const char of leadingWhitespace) {
             if (char === '\t') spaceCount += 4;
             else spaceCount += 1;
         }
-        const indentLevel = Math.floor(spaceCount / 4);
-        const indentPx = indentLevel * 25; // 25px per level
+        const indentLevel = spaceCount; // Now each space is a level
+        const indentPx = indentLevel * 10; // 10px per space/level
         const indentStyle = indentLevel > 0 ? `margin-left: ${indentPx}px;` : '';
 
         const trimmedLine = line.trim();
@@ -347,48 +552,59 @@ function parseMarkdown(lines) {
         }
 
         // 1. LISTS
-        const isUl = trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ');
-        const isOl = /^\d+\.\s/.test(trimmedLine);
+        const ulMatch = trimmedLine.match(/^([-*])\s+(.*)$/) || trimmedLine.match(/^([-*])$/);
+        const olMatch = trimmedLine.match(/^(\d+)\.\s+(.*)$/) || trimmedLine.match(/^(\d+)\.$/);
+        const isUl = !!ulMatch;
+        const isOl = !!olMatch;
 
         if (isUl || isOl) {
             const newListType = isUl ? 'ul' : 'ol';
+            const startNum = olMatch ? olMatch[1] : '1';
             
             if (!inList) {
                 inList = true;
                 listType = newListType;
-                html += `<${listType} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px;">\n`;
-            } else if (listType !== newListType) {
+                lastIndentLevel = indentLevel;
+                const startAttr = (newListType === 'ol' && startNum !== '1') ? ` start="${startNum}"` : '';
+                html += `<${listType}${startAttr} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px; ${indentStyle}">\n`;
+            } else if (listType !== newListType || lastIndentLevel !== indentLevel || (isOl && startNum === '1' && trimmedLine.startsWith('1.'))) {
+                // Restart list if type/indent changes, OR if it's explicitly "1." which often signals a new list in MD
                 html += `</${listType}>\n`;
                 listType = newListType;
-                html += `<${listType} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px;">\n`;
+                lastIndentLevel = indentLevel;
+                const startAttr = (newListType === 'ol' && startNum !== '1') ? ` start="${startNum}"` : '';
+                html += `<${listType}${startAttr} class="animate-text wait-animation" style="margin-left: 20px; margin-bottom: 10px; ${indentStyle}">\n`;
             }
 
-            const content = trimmedLine.substring(isUl ? 2 : trimmedLine.indexOf(' ') + 1);
+            const content = (ulMatch ? (ulMatch[2] || '') : (olMatch[2] || ''));
             
             // PROCESS CONTENT: Preprocess media -> Inline MD -> Restore media
             const pre = preprocessMedia(content);
             const mid = processInlineMarkdown(pre.text);
-            const final = restoreMedia(mid, pre.placeholders, ''); // No extra indent inside LI
+            const final = restoreMedia(mid, pre.placeholders, ''); 
             
-            // Check for block ID inside list content
             let liIdAttr = '';
             const idMatch = final.match(/\s+\^([a-zA-Z0-9-]+)\s*$/);
             let cleanedFinal = final;
             if (idMatch) {
                 liIdAttr = ` id="${idMatch[1]}"`;
-                // Remove the ID marker from the display text
                 cleanedFinal = final.replace(/\s+\^([a-zA-Z0-9-]+)\s*$/, '');
             }
             
-            html += `<li${liIdAttr} style="margin-bottom: 5px; ${indentStyle}">${cleanedFinal}</li>\n`;
+            html += `<li${liIdAttr} style="margin-bottom: 5px;">${cleanedFinal}</li>\n`;
             return;
-        } else if (inList) {
-            html += `</${listType}>\n`;
-            inList = false;
+        } else if (inList && trimmedLine !== '') {
+            // If it's a non-empty line and not a list item, check if we should close the list
+            // We close it if the indentation is less than or equal to the list's indentation
+            if (indentLevel <= lastIndentLevel) {
+                html += `</${listType}>\n`;
+                inList = false;
+            }
         }
 
         // 2. CODE BLOCKS
         if (trimmedLine.startsWith('```')) {
+            if (inList) { html += `</${listType}>\n`; inList = false; }
             inCodeBlock = !inCodeBlock;
             if (inCodeBlock) {
                 codeLang = line.trim().substring(3).trim();
@@ -410,6 +626,7 @@ function parseMarkdown(lines) {
 
         // 3. HORIZONTAL RULE
         if (trimmedLine === '---' || trimmedLine === '***') {
+            if (inList) { html += `</${listType}>\n`; inList = false; }
             html += `<hr class="animate-text wait-animation" style="border: 0; border-top: 1px solid #333; margin: 20px 0; ${indentStyle}">`;
             return;
         }
@@ -471,7 +688,7 @@ function parseMarkdown(lines) {
         if (processedLine.startsWith('<h') || processedLine.startsWith('<blockquote')) {
             // Inject ID into existing tag if present
             if (blockId) {
-                processedLine = processedLine.replace(/^<([a-z0-9]+)/i, `<$1${idAttr}`);
+                processedLine = processedLine.replace(/^<([a-z0-9]+)/i, `<${idAttr}`);
             }
             processedLine = processedLine.replace(/>(.*?)<\//, (m, inner) => `>${processInlineMarkdown(inner)}</`); 
         } else if (!processedLine.startsWith('<')) {
@@ -549,3 +766,4 @@ function processInlineMarkdown(text) {
             return `<a href="${processedUrl}"${isExternal ? ' target="_blank"' : ''} style="color: #58A6FF; text-decoration: underline;">${text}</a>`;
         });
 }
+
