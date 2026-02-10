@@ -46,12 +46,19 @@ Since this is a purely static site, there is no build process (no Webpack, Vite,
     *   `search.css`: Styles for the search interface and results.
     *   `spa-transitions.css`: Animations for state changes.
 *   **`JS/`**: JavaScript logic.
-    *   `app.js`: Main entry logic (currently seems to be a duplicate or older version of logic found in `Main-menu.js` or `search-engine.js` - check imports in `index.html`).
-    *   `Main-menu.js`: Logic for the orbit menu.
+    *   `app.js`: Legacy entry logic.
+    *   `Main-menu.js`: Logic for the orbit menu, routing, and UI transitions.
     *   `search-engine.js`: Logic for the search functionality.
     *   `music-player.js`: Logic for the audio player.
+    *   `instruction-renderer.js`: Specialized Markdown parser and renderer with block-by-block streaming effects.
 *   **`Media/`**: Static assets (images, logos).
 *   **`Information/`**: (Appears empty or reserved for future static content).
+
+## Recent Updates
+
+*   **Slower Content Streaming:** The "ChatGPT-like" streaming effect for instruction content has been slowed down (400ms per block) for better readability.
+*   **Improved Navigation:** The "Jump to Section" anchor popup now automatically dismisses if the user clicks anywhere else on the page.
+*   **Anchor Logic Enhancement:** Refined anchor handling for internal links and deep-linking.
 
 ## Development Conventions
 

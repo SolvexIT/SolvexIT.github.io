@@ -998,4 +998,22 @@ function showAnchorPopup(anchorId) {
         popup.style.transform = 'translateY(20px)';
         setTimeout(() => popup.remove(), 300);
     };
+
+    // Dismiss on click outside
+    const handleOutsideClick = (e) => {
+        if (!popup.contains(e.target)) {
+            clearURLAnchor();
+            popup.style.opacity = '0';
+            popup.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                popup.remove();
+                document.removeEventListener('click', handleOutsideClick);
+            }, 300);
+        }
+    };
+    
+    // Use setTimeout to avoid immediate dismissal from the click that opened it
+    setTimeout(() => {
+        document.addEventListener('click', handleOutsideClick);
+    }, 100);
 }

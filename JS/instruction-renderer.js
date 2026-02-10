@@ -308,7 +308,7 @@ window.renderInstructionContent = function(data, targetElementId, options = {}) 
         animatedElements.forEach((el, index) => {
             setTimeout(() => {
                 el.classList.remove('wait-animation');
-            }, index * 200); // Deliberate streaming effect
+            }, index * 150); // Deliberate streaming effect (Slowed down for better UX)
         });
     }
 };
