@@ -105,6 +105,13 @@ style.textContent = `
         transform: scale(1.02);
         box-shadow: 0 0 20px rgba(88, 166, 255, 0.4), 0 5px 15px rgba(0,0,0,0.3) !important;
     }
+    .video-container video {
+        transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+    }
+    .video-container video:hover {
+        transform: scale(1.01);
+        box-shadow: 0 0 20px rgba(88, 166, 255, 0.4), 0 5px 15px rgba(0,0,0,0.3) !important;
+    }
     .close-modal-btn {
         position: absolute;
         top: 20px;
@@ -445,7 +452,7 @@ function parseMarkdown(lines) {
     // Helper: Pre-process media placeholders
     const preprocessMedia = (text) => {
         const placeholders = [];
-        const processedText = text.replace(/(button|img)\{(.*?)\}/g, (match) => {
+        const processedText = text.replace(/(button|img|vid)\{(.*?)\}/g, (match) => {
             placeholders.push(match);
             return `%%PH${placeholders.length - 1}%%`;
         });
@@ -503,7 +510,7 @@ function parseMarkdown(lines) {
                     const iconClass = (iconMap[label.toLowerCase()] || iconMap[type.toLowerCase()]) || 'fas fa-link';
                     return `<a href="${processedUrl}" ${targetAttr} class="download-btn animate-text wait-animation ${type.toLowerCase()}" style="display:inline-block; padding:10px 20px; ${bgColor ? `background:${bgColor};` : ''} color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconClass}"></i> ${label}</a>`;
                 });
-            } else {
+            } else if (original.startsWith('img')) {
                 return original.replace(/img\{(.*?)\}/g, (m, content) => {
                     let src = '', pos = 'center', size = '100%';
                     const lM = content.match(/(?:link|url)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
@@ -516,7 +523,27 @@ function parseMarkdown(lines) {
                     // Apply indentStyle to the image container
                     return `<div class="img-container animate-text wait-animation" style="margin: 20px 0; ${indentStyle} text-align: ${pos === 'left' ? 'left' : (pos === 'right' ? 'right' : 'center')};"><img src="${src.replace(/&amp;/g, '&')}" onclick="window.openImagePreview(this.src)" style="width: ${size}; max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); cursor: zoom-in;" alt="Image"></div>`;
                 });
+            } else if (original.startsWith('vid')) {
+                return original.replace(/vid\{(.*?)\}/g, (m, content) => {
+                    let src = '', pos = 'center', size = '100%';
+                    const lM = content.match(/(?:link|url)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                    if (lM) src = lM[1].trim();
+                    const pM = content.match(/position\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                    if (pM) pos = pM[1].toLowerCase().trim();
+                    const sM = content.match(/size\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                    if (sM) size = sM[1].trim();
+                    if (!src) return '';
+                    
+                    const textAlign = pos === 'left' ? 'left' : (pos === 'right' ? 'right' : 'center');
+                    return `<div class="video-container animate-text wait-animation" style="margin: 20px 0; ${indentStyle} text-align: ${textAlign};">
+                        <video controls preload="metadata" style="width: ${size}; max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+                            <source src="${src.replace(/&amp;/g, '&')}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>`;
+                });
             }
+            return match;
         });
     };
 
