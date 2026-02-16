@@ -98,11 +98,100 @@ style.textContent = `
     .image-modal img.interacting {
         transition: none !important;
     }
+    .video-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        backdrop-filter: blur(12px);
+    }
+    .video-modal.active {
+        display: flex;
+        opacity: 1;
+    }
+    .video-modal-content {
+        position: relative;
+        width: 90%;
+        max-width: 1200px;
+        max-height: 80vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .video-loading-spinner {
+        position: absolute;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        color: #58A6FF;
+        z-index: 10;
+    }
+    .video-loading-spinner i {
+        font-size: 40px;
+        animation: fa-spin 2s linear infinite;
+    }
+    .video-modal video {
+        width: 100%;
+        height: auto;
+        max-height: 85vh;
+        border-radius: 12px;
+        box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        outline: none;
+        background: #000;
+    }
+    .video-modal video::-webkit-media-controls-fullscreen-button {
+        display: none !important;
+    }
+    .video-container {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+    }
+    .video-overlay-play {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(88, 166, 255, 0.8);
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 24px;
+        pointer-events: none;
+        transition: all 0.3s ease;
+        opacity: 0.8;
+        box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+    .video-container:hover .video-overlay-play {
+        transform: translate(-50%, -50%) scale(1.1);
+        background: #58A6FF;
+        opacity: 1;
+    }
     .img-container img {
         transition: transform 0.3s ease, box-shadow 0.3s ease !important;
     }
     .img-container img:hover {
         transform: scale(1.02);
+        box-shadow: 0 0 20px rgba(88, 166, 255, 0.4), 0 5px 15px rgba(0,0,0,0.3) !important;
+    }
+    .video-container video {
+        transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+    }
+    .video-container video:hover {
+        transform: scale(1.01);
         box-shadow: 0 0 20px rgba(88, 166, 255, 0.4), 0 5px 15px rgba(0,0,0,0.3) !important;
     }
     .close-modal-btn {
@@ -260,6 +349,141 @@ window.closeImagePreview = function() {
     }, 300);
 };
 
+// --- VIDEO PREVIEW MODAL LOGIC ---
+(function initVideoPreview() {
+    const modal = document.createElement('div');
+    modal.id = 'videoPreviewModal';
+    modal.className = 'video-modal';
+    modal.innerHTML = `
+        <button class="close-modal-btn" onclick="window.closeVideoPreview()"><i class="fas fa-times"></i></button>
+        <div class="video-modal-content">
+            <div id="videoSpinner" class="video-loading-spinner">
+                <i class="fas fa-circle-notch"></i>
+                <span id="videoProgressText">Подключение...</span>
+                <div class="video-progress-container">
+                    <div id="videoProgressBar" class="video-progress-bar"></div>
+                </div>
+            </div>
+            <video id="previewVideo" controls playsinline controlsList="nofullscreen"></video>
+        </div>
+    `;
+
+    modal.onclick = (e) => {
+        if (e.target.id === 'videoPreviewModal') window.closeVideoPreview();
+    };
+
+    document.body.appendChild(modal);
+})();
+
+let currentVideoObjectURL = null;
+
+window.openVideoPreview = function(src) {
+    const modal = document.getElementById('videoPreviewModal');
+    const video = document.getElementById('previewVideo');
+    const spinner = document.getElementById('videoSpinner');
+    const progressText = document.getElementById('videoProgressText');
+    const progressBar = document.getElementById('videoProgressBar');
+    
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+    document.body.style.overflow = 'hidden';
+
+    // Reset UI
+    spinner.style.display = 'flex';
+    video.style.opacity = '0';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) progressText.textContent = 'Подключение...';
+
+    // Use standard streaming with a "Large Buffer" logic
+    video.src = src;
+    video.preload = "auto";
+    video.load();
+
+    let hasStarted = false;
+
+    // Show spinner if we hit a gap during playback
+    video.onwaiting = () => {
+        spinner.style.display = 'flex';
+        if (progressText) progressText.textContent = 'Дозагрузка...';
+    };
+
+    video.onplaying = () => {
+        spinner.style.display = 'none';
+        video.style.opacity = '1';
+    };
+
+    // Tracking progress for the "Large Buffer"
+    video.onprogress = () => {
+        if (video.duration > 0 && video.buffered.length > 0) {
+            let bufferedEnd = 0;
+            for (let i = 0; i < video.buffered.length; i++) {
+                if (video.buffered.start(i) <= video.currentTime) {
+                    bufferedEnd = video.buffered.end(i);
+                }
+            }
+            
+            const duration = video.duration;
+            const progress = Math.round((bufferedEnd / duration) * 100);
+            
+            if (progressText) progressText.textContent = `Буфер: ${progress}%`;
+            if (progressBar) progressBar.style.width = `${progress}%`;
+
+            // "LARGE BUFFER" LOGIC:
+            // Don't start playing until we have 10% buffered OR 20 seconds of video
+            if (!hasStarted && (progress >= 10 || bufferedEnd > 20)) {
+                hasStarted = true;
+                spinner.style.display = 'none';
+                video.style.opacity = '1';
+                video.play().catch(e => console.log("Auto-play blocked"));
+            }
+        }
+    };
+
+    // Safety fallback
+    video.oncanplaythrough = () => {
+        if (!hasStarted) {
+            hasStarted = true;
+            spinner.style.display = 'none';
+            video.style.opacity = '1';
+            video.play().catch(e => {});
+        }
+    };
+
+    video.onerror = () => {
+        console.error("Video stream error");
+        spinner.style.display = 'flex';
+        spinner.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>Ошибка стриминга</span>`;
+    };
+};
+
+window.closeVideoPreview = function() {
+    const modal = document.getElementById('videoPreviewModal');
+    const video = document.getElementById('previewVideo');
+    if (!modal) return;
+    
+    modal.classList.remove('active');
+    if (video) {
+        video.pause();
+        video.src = ""; 
+        video.load();
+        video.onwaiting = null;
+        video.onplaying = null;
+        video.oncanplaythrough = null;
+        video.onprogress = null;
+        video.onerror = null;
+    }
+
+    if (currentVideoObjectURL) {
+        URL.revokeObjectURL(currentVideoObjectURL);
+        currentVideoObjectURL = null;
+    }
+    
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }, 300);
+};
+
 window.renderInstructionContent = function(data, targetElementId, options = {}) {
     const targetElement = document.getElementById(targetElementId);
     if (!targetElement) return;
@@ -308,7 +532,7 @@ window.renderInstructionContent = function(data, targetElementId, options = {}) 
         animatedElements.forEach((el, index) => {
             setTimeout(() => {
                 el.classList.remove('wait-animation');
-            }, index * 200); // Deliberate streaming effect
+            }, index * 150); // Deliberate streaming effect (Slowed down for better UX)
         });
     }
 };
@@ -445,7 +669,7 @@ function parseMarkdown(lines) {
     // Helper: Pre-process media placeholders
     const preprocessMedia = (text) => {
         const placeholders = [];
-        const processedText = text.replace(/(button|img)\{(.*?)\}/g, (match) => {
+        const processedText = text.replace(/(button|img|vid)\{(.*?)\}/g, (match) => {
             placeholders.push(match);
             return `%%PH${placeholders.length - 1}%%`;
         });
@@ -503,7 +727,7 @@ function parseMarkdown(lines) {
                     const iconClass = (iconMap[label.toLowerCase()] || iconMap[type.toLowerCase()]) || 'fas fa-link';
                     return `<a href="${processedUrl}" ${targetAttr} class="download-btn animate-text wait-animation ${type.toLowerCase()}" style="display:inline-block; padding:10px 20px; ${bgColor ? `background:${bgColor};` : ''} color:white; text-decoration:none; border-radius:6px; margin-right:10px; margin-bottom:10px; font-family: sans-serif; font-weight: bold; font-size: 14px;"><i class="${iconClass}"></i> ${label}</a>`;
                 });
-            } else {
+            } else if (original.startsWith('img')) {
                 return original.replace(/img\{(.*?)\}/g, (m, content) => {
                     let src = '', pos = 'center', size = '100%';
                     const lM = content.match(/(?:link|url)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
@@ -516,7 +740,33 @@ function parseMarkdown(lines) {
                     // Apply indentStyle to the image container
                     return `<div class="img-container animate-text wait-animation" style="margin: 20px 0; ${indentStyle} text-align: ${pos === 'left' ? 'left' : (pos === 'right' ? 'right' : 'center')};"><img src="${src.replace(/&amp;/g, '&')}" onclick="window.openImagePreview(this.src)" style="width: ${size}; max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); cursor: zoom-in;" alt="Image"></div>`;
                 });
+            } else if (original.startsWith('vid')) {
+                return original.replace(/vid\{(.*?)\}/g, (m, content) => {
+                    let src = '', pos = 'center', size = '100%';
+                    const lM = content.match(/(?:link|url)\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                    if (lM) src = lM[1].trim();
+                    const pM = content.match(/position\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                    if (pM) pos = pM[1].toLowerCase().trim();
+                    const sM = content.match(/size\s*(?:<|&lt;)\s*(.*?)\s*(?:>|&gt;)/i);
+                    if (sM) size = sM[1].trim();
+                    if (!src) return '';
+                    
+                    const textAlign = pos === 'left' ? 'left' : (pos === 'right' ? 'right' : 'center');
+                    const videoSrc = src.replace(/&amp;/g, '&');
+                    
+                    return `<div class="video-container-wrapper animate-text wait-animation" style="margin: 20px 0; ${indentStyle} text-align: ${textAlign};">
+                        <div class="video-container" onclick="window.openVideoPreview('${videoSrc}')" style="display:inline-block; width: ${size}; max-width: 100%;">
+                            <video preload="metadata" playsinline webkit-playsinline style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+                                <source src="${videoSrc}" type="video/mp4">
+                            </video>
+                            <div class="video-overlay-play">
+                                <i class="fas fa-play"></i>
+                            </div>
+                        </div>
+                    </div>`;
+                });
             }
+            return match;
         });
     };
 

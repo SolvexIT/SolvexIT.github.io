@@ -311,6 +311,8 @@ function activateViewContainer(viewName) {
 }
 
 // ROUTING HELPER
+let fullscreenExitGuard = false;
+
 function setHash(hash) {
     if (window.location.hash !== hash) {
         isInternalRouteUpdate = true;
@@ -783,6 +785,16 @@ window.addEventListener('load', () => {
     handleRouting();
     window.addEventListener('hashchange', handleRouting);
     window.addEventListener('popstate', handleRouting);
+    
+    // Fix for fullscreen video exit causing navigation reset
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+            // We are exiting fullscreen
+            fullscreenExitGuard = true;
+            // Clear guard after a short delay in case no routing event fired
+            setTimeout(() => { fullscreenExitGuard = false; }, 1000);
+        }
+    });
 });
 
 window.handleAnchorClick = function(slug) {
@@ -872,6 +884,16 @@ function scrollToAnchor(id) {
 
 function handleRouting() {
     if (isInternalRouteUpdate) return;
+    
+    // GUARD: If we are in fullscreen (e.g. video), do not process routing changes.
+    // This prevents "returning to menu" when exiting fullscreen video in some browsers.
+    if (document.fullscreenElement) return;
+
+    // If we just exited fullscreen, ignore this routing pass
+    if (fullscreenExitGuard) {
+        fullscreenExitGuard = false;
+        return;
+    }
 
     const hash = window.location.hash;
     const urlParams = new URLSearchParams(window.location.search);
@@ -897,7 +919,13 @@ function handleRouting() {
     } else if (hasSearch && !hash) {
         setHash('#/search');
     } else if (!hash) {
+        // If we are in view-mode and hash is empty, it usually means we should return to menu.
+        // BUT if we just exited fullscreen, we stay put because the browser might have cleared the hash incorrectly.
         if (document.body.classList.contains('view-mode')) {
+            if (fullscreenExitGuard) {
+                console.log("Blocking returnToMenu due to fullscreenExitGuard");
+                return;
+            }
             returnToMenu();
         } else {
              renderItems(menuConfig);
@@ -998,4 +1026,22 @@ function showAnchorPopup(anchorId) {
         popup.style.transform = 'translateY(20px)';
         setTimeout(() => popup.remove(), 300);
     };
+
+    // Dismiss on click outside
+    const handleOutsideClick = (e) => {
+        if (!popup.contains(e.target)) {
+            clearURLAnchor();
+            popup.style.opacity = '0';
+            popup.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                popup.remove();
+                document.removeEventListener('click', handleOutsideClick);
+            }, 300);
+        }
+    };
+    
+    // Use setTimeout to avoid immediate dismissal from the click that opened it
+    setTimeout(() => {
+        document.addEventListener('click', handleOutsideClick);
+    }, 100);
 }
