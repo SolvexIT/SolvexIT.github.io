@@ -98,6 +98,88 @@ style.textContent = `
     .image-modal img.interacting {
         transition: none !important;
     }
+    .video-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        backdrop-filter: blur(12px);
+    }
+    .video-modal.active {
+        display: flex;
+        opacity: 1;
+    }
+    .video-modal-content {
+        position: relative;
+        width: 90%;
+        max-width: 1200px;
+        max-height: 80vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .video-loading-spinner {
+        position: absolute;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        color: #58A6FF;
+        z-index: 10;
+    }
+    .video-loading-spinner i {
+        font-size: 40px;
+        animation: fa-spin 2s linear infinite;
+    }
+    .video-modal video {
+        width: 100%;
+        height: auto;
+        max-height: 85vh;
+        border-radius: 12px;
+        box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        outline: none;
+        background: #000;
+    }
+    .video-modal video::-webkit-media-controls-fullscreen-button {
+        display: none !important;
+    }
+    .video-container {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+    }
+    .video-overlay-play {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(88, 166, 255, 0.8);
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 24px;
+        pointer-events: none;
+        transition: all 0.3s ease;
+        opacity: 0.8;
+        box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+    .video-container:hover .video-overlay-play {
+        transform: translate(-50%, -50%) scale(1.1);
+        background: #58A6FF;
+        opacity: 1;
+    }
     .img-container img {
         transition: transform 0.3s ease, box-shadow 0.3s ease !important;
     }
@@ -264,6 +346,90 @@ window.closeImagePreview = function() {
     setTimeout(() => {
         modal.style.display = 'none';
         document.body.style.overflow = ''; // Restore scrolling
+    }, 300);
+};
+
+// --- VIDEO PREVIEW MODAL LOGIC ---
+(function initVideoPreview() {
+    const modal = document.createElement('div');
+    modal.id = 'videoPreviewModal';
+    modal.className = 'video-modal';
+    modal.innerHTML = `
+        <button class="close-modal-btn" onclick="window.closeVideoPreview()"><i class="fas fa-times"></i></button>
+        <div class="video-modal-content">
+            <div id="videoSpinner" class="video-loading-spinner">
+                <i class="fas fa-circle-notch"></i>
+                <span>Загрузка видео...</span>
+            </div>
+            <video id="previewVideo" controls playsinline controlsList="nofullscreen"></video>
+        </div>
+    `;
+
+    modal.onclick = (e) => {
+        if (e.target.id === 'videoPreviewModal') window.closeVideoPreview();
+    };
+
+    document.body.appendChild(modal);
+})();
+
+let currentVideoObjectURL = null;
+
+window.openVideoPreview = function(src) {
+    const modal = document.getElementById('videoPreviewModal');
+    const video = document.getElementById('previewVideo');
+    const spinner = document.getElementById('videoSpinner');
+    
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+    document.body.style.overflow = 'hidden';
+
+    // Show spinner
+    spinner.style.display = 'flex';
+    video.style.opacity = '0';
+
+    // Clear previous video
+    if (currentVideoObjectURL) {
+        URL.revokeObjectURL(currentVideoObjectURL);
+    }
+
+    // Fetch video as BLOB to prevent GitHub loading issues
+    fetch(src)
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.blob();
+        })
+        .then(blob => {
+            currentVideoObjectURL = URL.createObjectURL(blob);
+            video.src = currentVideoObjectURL;
+            spinner.style.display = 'none';
+            video.style.opacity = '1';
+            video.play().catch(e => console.log("Auto-play blocked"));
+        })
+        .catch(err => {
+            console.error("Video loading failed:", err);
+            spinner.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>Ошибка загрузки</span>`;
+        });
+};
+
+window.closeVideoPreview = function() {
+    const modal = document.getElementById('videoPreviewModal');
+    const video = document.getElementById('previewVideo');
+    if (!modal) return;
+    
+    modal.classList.remove('active');
+    if (video) {
+        video.pause();
+        video.src = "";
+    }
+
+    if (currentVideoObjectURL) {
+        URL.revokeObjectURL(currentVideoObjectURL);
+        currentVideoObjectURL = null;
+    }
+    
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
     }, 300);
 };
 
@@ -535,11 +701,17 @@ function parseMarkdown(lines) {
                     if (!src) return '';
                     
                     const textAlign = pos === 'left' ? 'left' : (pos === 'right' ? 'right' : 'center');
-                    return `<div class="video-container animate-text wait-animation" style="margin: 20px 0; ${indentStyle} text-align: ${textAlign};">
-                        <video controls preload="metadata" style="width: ${size}; max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
-                            <source src="${src.replace(/&amp;/g, '&')}" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
+                    const videoSrc = src.replace(/&amp;/g, '&');
+                    
+                    return `<div class="video-container-wrapper animate-text wait-animation" style="margin: 20px 0; ${indentStyle} text-align: ${textAlign};">
+                        <div class="video-container" onclick="window.openVideoPreview('${videoSrc}')" style="display:inline-block; width: ${size}; max-width: 100%;">
+                            <video preload="metadata" playsinline webkit-playsinline style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+                                <source src="${videoSrc}" type="video/mp4">
+                            </video>
+                            <div class="video-overlay-play">
+                                <i class="fas fa-play"></i>
+                            </div>
+                        </div>
                     </div>`;
                 });
             }
