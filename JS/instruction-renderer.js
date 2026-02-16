@@ -359,7 +359,10 @@ window.closeImagePreview = function() {
         <div class="video-modal-content">
             <div id="videoSpinner" class="video-loading-spinner">
                 <i class="fas fa-circle-notch"></i>
-                <span>Загрузка видео...</span>
+                <span id="videoProgressText">Подключение...</span>
+                <div class="video-progress-container">
+                    <div id="videoProgressBar" class="video-progress-bar"></div>
+                </div>
             </div>
             <video id="previewVideo" controls playsinline controlsList="nofullscreen"></video>
         </div>
@@ -378,37 +381,79 @@ window.openVideoPreview = function(src) {
     const modal = document.getElementById('videoPreviewModal');
     const video = document.getElementById('previewVideo');
     const spinner = document.getElementById('videoSpinner');
+    const progressText = document.getElementById('videoProgressText');
+    const progressBar = document.getElementById('videoProgressBar');
     
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('active'), 10);
     document.body.style.overflow = 'hidden';
 
-    // Show spinner
+    // Reset UI
     spinner.style.display = 'flex';
     video.style.opacity = '0';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) progressText.textContent = 'Подключение...';
 
-    // Clear previous video
-    if (currentVideoObjectURL) {
-        URL.revokeObjectURL(currentVideoObjectURL);
-    }
+    // Use standard streaming with a "Large Buffer" logic
+    video.src = src;
+    video.preload = "auto";
+    video.load();
 
-    // Fetch video as BLOB to prevent GitHub loading issues
-    fetch(src)
-        .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.blob();
-        })
-        .then(blob => {
-            currentVideoObjectURL = URL.createObjectURL(blob);
-            video.src = currentVideoObjectURL;
+    let hasStarted = false;
+
+    // Show spinner if we hit a gap during playback
+    video.onwaiting = () => {
+        spinner.style.display = 'flex';
+        if (progressText) progressText.textContent = 'Дозагрузка...';
+    };
+
+    video.onplaying = () => {
+        spinner.style.display = 'none';
+        video.style.opacity = '1';
+    };
+
+    // Tracking progress for the "Large Buffer"
+    video.onprogress = () => {
+        if (video.duration > 0 && video.buffered.length > 0) {
+            let bufferedEnd = 0;
+            for (let i = 0; i < video.buffered.length; i++) {
+                if (video.buffered.start(i) <= video.currentTime) {
+                    bufferedEnd = video.buffered.end(i);
+                }
+            }
+            
+            const duration = video.duration;
+            const progress = Math.round((bufferedEnd / duration) * 100);
+            
+            if (progressText) progressText.textContent = `Буфер: ${progress}%`;
+            if (progressBar) progressBar.style.width = `${progress}%`;
+
+            // "LARGE BUFFER" LOGIC:
+            // Don't start playing until we have 10% buffered OR 20 seconds of video
+            if (!hasStarted && (progress >= 10 || bufferedEnd > 20)) {
+                hasStarted = true;
+                spinner.style.display = 'none';
+                video.style.opacity = '1';
+                video.play().catch(e => console.log("Auto-play blocked"));
+            }
+        }
+    };
+
+    // Safety fallback
+    video.oncanplaythrough = () => {
+        if (!hasStarted) {
+            hasStarted = true;
             spinner.style.display = 'none';
             video.style.opacity = '1';
-            video.play().catch(e => console.log("Auto-play blocked"));
-        })
-        .catch(err => {
-            console.error("Video loading failed:", err);
-            spinner.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>Ошибка загрузки</span>`;
-        });
+            video.play().catch(e => {});
+        }
+    };
+
+    video.onerror = () => {
+        console.error("Video stream error");
+        spinner.style.display = 'flex';
+        spinner.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>Ошибка стриминга</span>`;
+    };
 };
 
 window.closeVideoPreview = function() {
@@ -419,7 +464,13 @@ window.closeVideoPreview = function() {
     modal.classList.remove('active');
     if (video) {
         video.pause();
-        video.src = "";
+        video.src = ""; 
+        video.load();
+        video.onwaiting = null;
+        video.onplaying = null;
+        video.oncanplaythrough = null;
+        video.onprogress = null;
+        video.onerror = null;
     }
 
     if (currentVideoObjectURL) {
